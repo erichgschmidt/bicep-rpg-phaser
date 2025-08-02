@@ -6,9 +6,8 @@ export default class GameScene extends Phaser.Scene {
         this.gridSize = 32;
         this.worldChunkSize = 16; // 16x16 tiles per chunk
         this.moveDelay = 0;
-        this.moveSpeed = 250; // ms for move animation (more fluid)
-        this.moveCooldown = 300; // ms between moves
-        this.enemyMoveInterval = 1500; // enemies move every 1.5 seconds
+        this.moveSpeed = 180; // ms for move animation (faster, more responsive)
+        this.moveCooldown = 200; // ms between moves (player can move more frequently)
         this.chunks = new Map(); // Store world chunks
         this.enemies = new Map(); // Store enemies by chunk
     }
@@ -36,14 +35,6 @@ export default class GameScene extends Phaser.Scene {
         
         // Listen for combat events
         this.setupEventListeners();
-        
-        // Start enemy movement timer
-        this.time.addEvent({
-            delay: this.enemyMoveInterval,
-            callback: this.moveEnemies,
-            callbackScope: this,
-            loop: true
-        });
     }
 
     createPlayer() {
@@ -171,10 +162,38 @@ export default class GameScene extends Phaser.Scene {
 
     getEnemyTypeFromSeed(value) {
         const types = [
-            { name: 'Pebble', color: 0x808080, power: 0.5 },
-            { name: 'Stick', color: 0x8b4513, power: 1 },
-            { name: 'Rock', color: 0x696969, power: 2 },
-            { name: 'Angry Squirrel', color: 0xcd853f, power: 3 }
+            { 
+                name: 'Pebble', 
+                color: 0x808080, 
+                power: 0.5,
+                moveSpeed: 300, // Very fast but weak
+                movePattern: 'erratic', // Jumpy movement
+                pauseChance: 0.3 // 30% chance to pause
+            },
+            { 
+                name: 'Stick', 
+                color: 0x8b4513, 
+                power: 1,
+                moveSpeed: 220, // Normal speed
+                movePattern: 'patrol', // Back and forth
+                pauseChance: 0.4
+            },
+            { 
+                name: 'Rock', 
+                color: 0x696969, 
+                power: 2,
+                moveSpeed: 400, // Slow and steady
+                movePattern: 'lazy', // Moves rarely
+                pauseChance: 0.7 // Often just sits there
+            },
+            { 
+                name: 'Angry Squirrel', 
+                color: 0xcd853f, 
+                power: 3,
+                moveSpeed: 150, // Very fast
+                movePattern: 'aggressive', // Moves a lot
+                pauseChance: 0.1 // Rarely stops
+            }
         ];
         
         // Weighted selection - weaker enemies more common
@@ -228,8 +247,14 @@ export default class GameScene extends Phaser.Scene {
             power: enemyType.power,
             health: enemyType.power * 50,
             maxHealth: enemyType.power * 50,
-            moveTimer: Math.random() * this.enemyMoveInterval,
-            moving: false
+            moving: false,
+            // Individual movement properties
+            moveSpeed: enemyType.moveSpeed + (Math.random() * 100 - 50), // Add some variation
+            movePattern: enemyType.movePattern,
+            pauseChance: enemyType.pauseChance,
+            nextMoveTime: 0,
+            moveDirection: { dx: 0, dy: -1 }, // Initial direction
+            pauseDuration: 0
         };
         
         body.on('pointerdown', () => {
@@ -277,22 +302,97 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    moveEnemies() {
-        // Move all enemies in visible chunks
+    updateEnemies(time) {
+        // Update all enemies in visible chunks
         this.chunks.forEach(chunk => {
             chunk.enemies.forEach(enemy => {
-                if (enemy.moving || this.isInCombat(enemy)) return;
+                if (this.isInCombat(enemy)) return;
                 
-                // Random movement
-                const directions = [
-                    { dx: 0, dy: -1 }, // up
-                    { dx: 1, dy: 0 },  // right
-                    { dx: 0, dy: 1 },  // down
-                    { dx: -1, dy: 0 }  // left
-                ];
-                
-                const dir = directions[Math.floor(Math.random() * directions.length)];
-                this.moveEnemy(enemy, dir.dx, dir.dy);
+                // Check if enemy is ready to make a decision
+                if (time >= enemy.nextMoveTime && !enemy.moving) {
+                    // Check if enemy should pause
+                    if (Math.random() < enemy.pauseChance) {
+                        // Enemy decides to pause
+                        enemy.pauseDuration = 500 + Math.random() * 2000; // Pause for 0.5-2.5 seconds
+                        enemy.nextMoveTime = time + enemy.pauseDuration;
+                        return;
+                    }
+                    
+                    // Enemy decides to move based on pattern
+                    let dx = 0, dy = 0;
+                    
+                    switch (enemy.movePattern) {
+                        case 'erratic':
+                            // Completely random movement
+                            const directions = [
+                                { dx: 0, dy: -1 }, { dx: 1, dy: 0 },
+                                { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+                            ];
+                            const randomDir = directions[Math.floor(Math.random() * directions.length)];
+                            dx = randomDir.dx;
+                            dy = randomDir.dy;
+                            break;
+                            
+                        case 'patrol':
+                            // Continue in same direction, turn if blocked
+                            dx = enemy.moveDirection.dx;
+                            dy = enemy.moveDirection.dy;
+                            // Occasionally change direction
+                            if (Math.random() < 0.2) {
+                                const turns = [{ dx: -dy, dy: dx }, { dx: dy, dy: -dx }];
+                                const turn = turns[Math.floor(Math.random() * turns.length)];
+                                dx = turn.dx;
+                                dy = turn.dy;
+                            }
+                            break;
+                            
+                        case 'lazy':
+                            // Move very occasionally
+                            if (Math.random() < 0.3) { // Only 30% chance to move
+                                const dirs = [
+                                    { dx: 0, dy: -1 }, { dx: 1, dy: 0 },
+                                    { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+                                ];
+                                const lazyDir = dirs[Math.floor(Math.random() * dirs.length)];
+                                dx = lazyDir.dx;
+                                dy = lazyDir.dy;
+                            }
+                            break;
+                            
+                        case 'aggressive':
+                            // Move towards player if nearby, otherwise random
+                            const distToPlayer = Math.abs(enemy.worldX - this.playerData.worldX) + 
+                                               Math.abs(enemy.worldY - this.playerData.worldY);
+                            if (distToPlayer <= 5) {
+                                // Move towards player
+                                dx = Math.sign(this.playerData.worldX - enemy.worldX);
+                                dy = Math.sign(this.playerData.worldY - enemy.worldY);
+                                // Prefer one direction
+                                if (dx !== 0 && dy !== 0) {
+                                    if (Math.random() < 0.5) dx = 0;
+                                    else dy = 0;
+                                }
+                            } else {
+                                // Random movement
+                                const aggrDirs = [
+                                    { dx: 0, dy: -1 }, { dx: 1, dy: 0 },
+                                    { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+                                ];
+                                const aggrDir = aggrDirs[Math.floor(Math.random() * aggrDirs.length)];
+                                dx = aggrDir.dx;
+                                dy = aggrDir.dy;
+                            }
+                            break;
+                    }
+                    
+                    if (dx !== 0 || dy !== 0) {
+                        enemy.moveDirection = { dx, dy };
+                        this.moveEnemy(enemy, dx, dy);
+                    }
+                    
+                    // Schedule next move based on individual speed
+                    enemy.nextMoveTime = time + enemy.moveSpeed + (Math.random() * 200 - 100);
+                }
             });
         });
     }
@@ -325,11 +425,20 @@ export default class GameScene extends Phaser.Scene {
             enemy.pixelX = newWorldX * this.gridSize;
             enemy.pixelY = newWorldY * this.gridSize;
             
+            // Face the direction of movement
+            if (dx > 0) {
+                enemy.arm.x = 25;
+                enemy.arm.setOrigin(0, 0.5);
+            } else if (dx < 0) {
+                enemy.arm.x = -25;
+                enemy.arm.setOrigin(1, 0.5);
+            }
+            
             this.tweens.add({
                 targets: enemy.container,
                 x: enemy.pixelX,
                 y: enemy.pixelY,
-                duration: this.moveSpeed,
+                duration: enemy.moveSpeed, // Use individual enemy speed
                 ease: 'Cubic.easeInOut',
                 onComplete: () => {
                     enemy.moving = false;
@@ -564,20 +673,31 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update(time, delta) {
+        // Update enemies
+        this.updateEnemies(time);
+        
         // Update move delay
         if (this.moveDelay > 0) {
             this.moveDelay -= delta;
         }
         
-        // Handle movement
+        // Handle movement - allow diagonal movement
         if (!this.inCombat && !this.playerData.moving && this.moveDelay <= 0) {
             let dx = 0;
             let dy = 0;
             
             if (this.cursors.left.isDown || this.wasd.A.isDown) dx = -1;
             else if (this.cursors.right.isDown || this.wasd.D.isDown) dx = 1;
-            else if (this.cursors.up.isDown || this.wasd.W.isDown) dy = -1;
+            
+            if (this.cursors.up.isDown || this.wasd.W.isDown) dy = -1;
             else if (this.cursors.down.isDown || this.wasd.S.isDown) dy = 1;
+            
+            // Only allow one direction at a time for grid movement
+            if (dx !== 0 && dy !== 0) {
+                // Prioritize the most recent input
+                if (Math.random() < 0.5) dy = 0;
+                else dx = 0;
+            }
             
             if (dx !== 0 || dy !== 0) {
                 this.movePlayer(dx, dy);
@@ -627,6 +747,15 @@ export default class GameScene extends Phaser.Scene {
             this.playerData.worldY = newWorldY;
             this.playerData.pixelX = newWorldX * this.gridSize;
             this.playerData.pixelY = newWorldY * this.gridSize;
+            
+            // Face the direction of movement
+            if (dx > 0) {
+                this.playerArm.x = 25;
+                this.playerArm.setOrigin(0, 0.5);
+            } else if (dx < 0) {
+                this.playerArm.x = -25;
+                this.playerArm.setOrigin(1, 0.5);
+            }
             
             this.tweens.add({
                 targets: this.playerContainer,
