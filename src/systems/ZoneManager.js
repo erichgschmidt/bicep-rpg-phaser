@@ -141,7 +141,10 @@ export default class ZoneManager {
         
         // Check all entities for zone entry
         this.entityManager.entities.forEach(entity => {
-            this.checkEntityZoneEntry(entity, zone);
+            const position = entity.getComponent('position');
+            if (position && this.isPositionInZone(position, zone)) {
+                this.handleEntityEnterZone(entity, zone);
+            }
         });
         
         this.eventBus.emit('zone:created', { zone });

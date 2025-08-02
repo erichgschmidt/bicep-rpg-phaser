@@ -375,6 +375,20 @@ export default class TimeSystem {
     }
 
     /**
+     * Update time system (called by game loop)
+     * @param {number} deltaTime - Time elapsed since last frame in milliseconds
+     */
+    update(deltaTime) {
+        if (this.timeState.isPaused) return;
+        
+        // Update time based on delta (for smooth time progression)
+        this.updateTime();
+        
+        // Process any scheduled events
+        this.processScheduledEvents();
+    }
+
+    /**
      * Clean up
      */
     destroy() {

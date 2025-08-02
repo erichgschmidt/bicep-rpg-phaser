@@ -329,7 +329,10 @@ export default class ProgressionSystem {
         const basePower = this.config.basePowerPerLevel * progression.level;
         const baseHealth = this.config.baseHealthPerLevel * progression.level;
         
-        // Apply stat bonuses
+        // Apply stat bonuses (ensure stats exist)
+        if (!progression.stats) {
+            progression.stats = { strength: 1, vitality: 1, agility: 1 };
+        }
         const strengthBonus = progression.stats.strength * 2;
         const vitalityBonus = progression.stats.vitality * 5;
         
