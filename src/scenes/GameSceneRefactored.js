@@ -877,8 +877,31 @@ export default class GameSceneRefactored extends Phaser.Scene {
     }
 
     updateGridDisplay() {
-        // Grid display removed for free movement
+        // Subtle grid display for visual reference
         this.gridGraphics.clear();
+        this.gridGraphics.lineStyle(1, 0x333333, 0.2); // Very subtle gray lines
+        
+        const worldView = this.cameras.main.worldView;
+        const gridSize = this.config.gridSize;
+        
+        const startX = Math.floor(worldView.left / gridSize) * gridSize;
+        const startY = Math.floor(worldView.top / gridSize) * gridSize;
+        const endX = Math.ceil(worldView.right / gridSize) * gridSize;
+        const endY = Math.ceil(worldView.bottom / gridSize) * gridSize;
+        
+        // Vertical lines
+        for (let x = startX; x <= endX; x += gridSize) {
+            this.gridGraphics.moveTo(x, startY);
+            this.gridGraphics.lineTo(x, endY);
+        }
+        
+        // Horizontal lines
+        for (let y = startY; y <= endY; y += gridSize) {
+            this.gridGraphics.moveTo(startX, y);
+            this.gridGraphics.lineTo(endX, y);
+        }
+        
+        this.gridGraphics.strokePath();
     }
 
     addIdleAnimation(visual, entity) {
