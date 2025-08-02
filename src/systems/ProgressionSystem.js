@@ -378,7 +378,10 @@ export default class ProgressionSystem {
         // Clear previous bonuses
         Object.keys(bonuses).forEach(key => delete bonuses[key]);
         
-        // Apply each learned talent
+        // Apply each learned talent (ensure talents exist)
+        if (!progression.talents) {
+            progression.talents = {};
+        }
         Object.entries(progression.talents).forEach(([treeName, talents]) => {
             const tree = this.talentTrees[treeName];
             if (!tree) return;
