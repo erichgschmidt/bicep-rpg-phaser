@@ -126,13 +126,16 @@ export default class AIMovementSystem {
 
             case 'patrol':
                 // Move in a pattern around spawn point
+                const currentPosX = position.pixelX || position.x;
+                const currentPosY = position.pixelY || position.y;
+                
                 const toSpawn = Math.atan2(
-                    aiState.spawnPoint.y - position.pixelY,
-                    aiState.spawnPoint.x - position.pixelX
+                    aiState.spawnPoint.y - currentPosY,
+                    aiState.spawnPoint.x - currentPosX
                 );
                 const distToSpawn = Math.sqrt(
-                    Math.pow(position.pixelX - aiState.spawnPoint.x, 2) +
-                    Math.pow(position.pixelY - aiState.spawnPoint.y, 2)
+                    Math.pow(currentPosX - aiState.spawnPoint.x, 2) +
+                    Math.pow(currentPosY - aiState.spawnPoint.y, 2)
                 );
                 
                 if (distToSpawn > 100) {
@@ -151,9 +154,13 @@ export default class AIMovementSystem {
                 return;
         }
 
-        // Calculate target position
-        const targetX = position.pixelX + Math.cos(angle) * distance;
-        const targetY = position.pixelY + Math.sin(angle) * distance;
+        // Get current pixel position (use visual position if available for smooth continuity)
+        const currentX = position.pixelX || position.x;
+        const currentY = position.pixelY || position.y;
+        
+        // Calculate target position from CURRENT position, not spawn
+        const targetX = currentX + Math.cos(angle) * distance;
+        const targetY = currentY + Math.sin(angle) * distance;
 
         // Check distance from spawn point
         const distanceFromSpawn = Math.sqrt(
@@ -164,11 +171,11 @@ export default class AIMovementSystem {
         if (distanceFromSpawn > this.config.maxWanderDistance * 32) { // Convert grid to pixels
             // Move back towards spawn
             const backAngle = Math.atan2(
-                aiState.spawnPoint.y - position.pixelY,
-                aiState.spawnPoint.x - position.pixelX
+                aiState.spawnPoint.y - currentY,
+                aiState.spawnPoint.x - currentX
             );
-            const finalX = position.pixelX + Math.cos(backAngle) * distance;
-            const finalY = position.pixelY + Math.sin(backAngle) * distance;
+            const finalX = currentX + Math.cos(backAngle) * distance;
+            const finalY = currentY + Math.sin(backAngle) * distance;
             
             this.eventBus.emit('entity:move-free', {
                 entityId: entity.id,

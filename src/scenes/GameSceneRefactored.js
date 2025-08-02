@@ -101,6 +101,13 @@ export default class GameSceneRefactored extends Phaser.Scene {
         const playerVisual = Player.createVisuals(this, playerEntity);
         this.entityVisuals.set(playerEntity.id, playerVisual);
         
+        // Ensure position is synced with visual
+        const pos = playerEntity.getComponent('position');
+        if (pos) {
+            pos.pixelX = playerVisual.x;
+            pos.pixelY = playerVisual.y;
+        }
+        
         // Store player reference
         this.playerId = playerEntity.id;
         
@@ -406,6 +413,13 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         if (visual) {
             this.entityVisuals.set(entity.id, visual);
+            
+            // Sync position component with visual position
+            const position = entity.getComponent('position');
+            if (position) {
+                position.pixelX = visual.x;
+                position.pixelY = visual.y;
+            }
             
             // Add subtle idle animation for more life
             this.addIdleAnimation(visual, entity);
