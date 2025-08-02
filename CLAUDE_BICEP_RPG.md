@@ -266,12 +266,31 @@ const nearbyEnemies = entityManager.getEntitiesInRadius(player.position, 10);
 - 🔄 Full architectural integration
 
 ### Planned
+- 📅 Combat improvements (spam clicking, timing challenges)
+- 📅 Debug system and testing interface
 - 📅 Save/load system
 - 📅 Talent tree UI
 - 📅 Inventory UI
 - 📅 Multiple biomes
 - 📅 Boss enemies
 - 📅 Multiplayer support
+
+### Future Features (Design Notes)
+- **Highly Aggressive Mobs**: Monsters that actively hunt players, larger aggro ranges
+- **Exercise Equipment Minigames**: 
+  - Randomly spawn in world (Dumbbells, Pull-up bars, Treadmills)
+  - Quick-time events or rhythm games for temporary buffs
+  - +Power, +Speed, +Health Regen bonuses
+- **Food Vendors**:
+  - Sell consumable buffs (Protein shakes, Energy bars, Pre-workout)
+  - Time-limited stat boosts
+  - Some vendors only appear at certain times
+- **Combat Variety**:
+  - Click spam battles (current basic implementation)
+  - Rhythm-based clicking (timing matters more than speed)
+  - Pattern matching (Simon Says style sequences)
+  - Endurance battles (consistent clicking over time)
+  - Power gauge timing (click at optimal moment for max damage)
 
 ## Development Commands
 

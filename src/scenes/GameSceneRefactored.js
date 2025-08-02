@@ -8,6 +8,8 @@ import { EnemyFactory } from '../entities/enemies/index.js';
 import { NeutralFactory } from '../entities/neutrals/index.js';
 import BaseEnemy from '../entities/enemies/BaseEnemy.js';
 import NeutralMob from '../entities/neutrals/NeutralMob.js';
+import CombatUI from '../ui/CombatUI.js';
+import DebugUI from '../ui/DebugUI.js';
 
 export default class GameSceneRefactored extends Phaser.Scene {
     constructor() {
@@ -34,6 +36,9 @@ export default class GameSceneRefactored extends Phaser.Scene {
         this.systems = window.gameCore;
         this.eventBus = this.systems.eventBus;
         
+        // Enable debug system
+        this.eventBus.emit('debug:enable');
+        
         // Create background
         this.createBackground();
         
@@ -54,6 +59,16 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         // Start time system
         this.eventBus.emit('time:resume');
+        
+        // Create UI components
+        this.combatUI = new CombatUI(this, this.systems.combatSystem);
+        this.debugUI = new DebugUI(this, this.systems.debugSystem);
+        
+        // Create debug button
+        this.createDebugButton();
+        
+        // Create game HUD
+        this.createGameHUD();
     }
 
     initializeSystems() {
@@ -148,6 +163,154 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         // Light glow
         const glow = this.add.circle(pixelX, pixelY, 150, 0xffa500, 0.1);
+    }
+
+    createDebugButton() {
+        // Create debug button in top-right corner
+        const buttonX = this.cameras.main.width - 80;
+        const buttonY = 30;
+        
+        // Button background
+        const buttonBg = this.add.rectangle(buttonX, buttonY, 70, 40, 0xff0000, 0.8);
+        buttonBg.setStrokeStyle(2, 0xffffff);
+        buttonBg.setScrollFactor(0); // Fixed to camera
+        buttonBg.setDepth(500);
+        buttonBg.setInteractive();
+        
+        // Button text
+        const buttonText = this.add.text(buttonX, buttonY, 'DEBUG', {
+            fontSize: '14px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        buttonText.setScrollFactor(0);
+        buttonText.setDepth(501);
+        
+        // Click handler
+        buttonBg.on('pointerdown', () => {
+            this.eventBus.emit('debug:toggle-menu');
+            
+            // Visual feedback
+            this.tweens.add({
+                targets: [buttonBg, buttonText],
+                scale: 0.9,
+                duration: 100,
+                yoyo: true,
+                ease: 'Quad.easeOut'
+            });
+        });
+        
+        // Hover effects
+        buttonBg.on('pointerover', () => {
+            buttonBg.setFillStyle(0xff4444);
+            buttonText.setScale(1.1);
+        });
+        
+        buttonBg.on('pointerout', () => {
+            buttonBg.setFillStyle(0xff0000);
+            buttonText.setScale(1.0);
+        });
+        
+        // Store references
+        this.debugButton = buttonBg;
+        this.debugButtonText = buttonText;
+    }
+
+    createGameHUD() {
+        // Game title
+        const title = this.add.text(20, 20, 'BICEP RPG', {
+            fontSize: '28px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3,
+            fontStyle: 'bold'
+        });
+        title.setScrollFactor(0);
+        title.setDepth(500);
+        
+        // Instructions
+        const instructions = this.add.text(20, 60, [
+            'WASD/Arrows: Move',
+            'Click Enemy: Fight',
+            'Click Neutral: Interact',
+            'Space/Click: Attack in Combat',
+            'ESC: Flee Combat'
+        ], {
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2,
+            lineSpacing: 2
+        });
+        instructions.setScrollFactor(0);
+        instructions.setDepth(500);
+        
+        // Player stats area
+        this.playerStatsText = this.add.text(20, 180, '', {
+            fontSize: '16px',
+            color: '#00ff00',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
+        this.playerStatsText.setScrollFactor(0);
+        this.playerStatsText.setDepth(500);
+        
+        // Time display
+        this.timeText = this.add.text(this.cameras.main.width - 20, 20, '', {
+            fontSize: '16px',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(1, 0);
+        this.timeText.setScrollFactor(0);
+        this.timeText.setDepth(500);
+        
+        // Position display
+        this.positionText = this.add.text(this.cameras.main.width - 20, 50, '', {
+            fontSize: '14px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(1, 0);
+        this.positionText.setScrollFactor(0);
+        this.positionText.setDepth(500);
+    }
+
+    updateHUD() {
+        // Update player stats
+        const player = this.systems.entityManager.getEntity(this.playerId);
+        if (player && this.playerStatsText) {
+            const health = player.getComponent('health');
+            const power = player.getComponent('power');
+            const position = player.getComponent('position');
+            const progression = player.getComponent('progression');
+            
+            let statsText = '';
+            if (health) {
+                statsText += `Health: ${health.current}/${health.max}\n`;
+            }
+            if (power) {
+                statsText += `Power: ${power.value}\n`;
+            }
+            if (progression) {
+                statsText += `Level: ${progression.level}\n`;
+                statsText += `XP: ${progression.experience}/${progression.experienceToNext}`;
+            }
+            
+            this.playerStatsText.setText(statsText);
+            
+            // Update position
+            if (position && this.positionText) {
+                this.positionText.setText(`Position: (${position.x}, ${position.y})`);
+            }
+        }
+        
+        // Update time
+        if (this.timeText) {
+            const currentTime = this.systems.timeSystem.getCurrentTime();
+            const timeString = this.systems.timeSystem.getTimeString();
+            this.timeText.setText(timeString);
+        }
     }
 
     createInitialNPCs() {
@@ -605,6 +768,9 @@ export default class GameSceneRefactored extends Phaser.Scene {
         this.systems.timeSystem.update(delta);
         this.systems.zoneManager.update(delta);
         
+        // Update UI
+        if (this.combatUI) this.combatUI.update(time, delta);
+        
         // Update entity visuals
         this.entityVisuals.forEach((visual, entityId) => {
             const entity = this.systems.entityManager.getEntity(entityId);
@@ -619,6 +785,9 @@ export default class GameSceneRefactored extends Phaser.Scene {
                 Player.updateVisuals(visual, entity);
             }
         });
+        
+        // Update HUD
+        this.updateHUD();
         
         // Update grid display
         this.updateGridDisplay();
@@ -657,7 +826,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
         }
         
         // Debug menu
-        if (this.input.keyboard.addKey('F1').isDown) {
+        if (this.input.keyboard.addKey('F2').isDown) {
             this.eventBus.emit('debug:toggle-menu');
         }
     }
