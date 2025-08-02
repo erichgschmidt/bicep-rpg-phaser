@@ -19,6 +19,7 @@ import RelationshipSystem from './systems/RelationshipSystem.js';
 import PartySystem from './systems/PartySystem.js';
 import PetSystem from './systems/PetSystem.js';
 import DebugSystem from './systems/DebugSystem.js';
+import AIMovementSystem from './systems/AIMovementSystem.js';
 
 // Initialize core systems (TRUNK)
 const eventBus = new EventBus();
@@ -37,6 +38,7 @@ const relationshipSystem = new RelationshipSystem(eventBus, entityManager);
 const partySystem = new PartySystem(eventBus, entityManager);
 const petSystem = new PetSystem(eventBus, entityManager);
 const debugSystem = new DebugSystem(eventBus, entityManager);
+const aiMovementSystem = new AIMovementSystem(eventBus, entityManager);
 
 // Make systems globally accessible (temporary - will use DI later)
 window.gameCore = {
@@ -57,7 +59,8 @@ window.gameCore = {
     relationshipSystem,
     partySystem,
     petSystem,
-    debugSystem
+    debugSystem,
+    aiMovementSystem
 };
 
 // Register game states
@@ -115,12 +118,18 @@ eventBus.on('entity:request-move', (data) => {
             const position = entity.getComponent('position');
             if (position) {
                 const oldPos = { x: position.x, y: position.y };
+                position.moving = true; // Set moving flag to prevent rapid movement
                 position.x = newPosition.x;
                 position.y = newPosition.y;
                 position.worldX = newPosition.x;
                 position.worldY = newPosition.y;
                 position.pixelX = newPosition.x * 32;
                 position.pixelY = newPosition.y * 32;
+                
+                // Check for combat encounters if this is a player
+                if (entity.hasTag('player')) {
+                    checkForCombatEncounters(entityManager, eventBus, entityId, newPosition);
+                }
                 
                 eventBus.emit('entity:moved', {
                     entityId,
@@ -131,6 +140,27 @@ eventBus.on('entity:request-move', (data) => {
         }
     }
 });
+
+// Function to check for combat encounters on movement
+function checkForCombatEncounters(entityManager, eventBus, playerId, playerPosition) {
+    // Find all hostile entities at the same position as player
+    const hostileEntities = entityManager.getEntitiesByTag('hostile');
+    
+    for (const enemy of hostileEntities) {
+        const enemyPosition = enemy.getComponent('position');
+        if (enemyPosition && 
+            enemyPosition.x === playerPosition.x && 
+            enemyPosition.y === playerPosition.y) {
+            
+            console.log('Combat encounter! Player moved into enemy at:', playerPosition);
+            eventBus.emit('combat:start', {
+                attackerId: playerId,
+                defenderId: enemy.id
+            });
+            break; // Only one combat at a time
+        }
+    }
+}
 
 // Log some system events
 eventBus.on('combat:started', (data) => {

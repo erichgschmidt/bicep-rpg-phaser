@@ -126,6 +126,7 @@ export default class BaseEnemy {
 
         // Set up interaction
         body.on('pointerdown', () => {
+            console.log('Enemy clicked!', enemyEntity.id);
             scene.events.emit('enemy:clicked', {
                 entityId: enemyEntity.id,
                 enemyData: enemyEntity.getComponent('enemyData')

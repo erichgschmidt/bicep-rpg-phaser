@@ -16,9 +16,9 @@ export default class CombatSystem {
             baseClickPower: 1,
             clickCooldown: 0, // milliseconds
             combatStartDelay: 1000, // 1 second before combat starts
-            tugThreshold: 0.75, // 75% for victory
-            defeatThreshold: 0.25, // 25% for defeat
-            enemyClickInterval: 100 // Enemy clicks every 100ms
+            tugThreshold: 0.65, // 65% for victory (easier)
+            defeatThreshold: 0.35, // 35% for defeat (harder to lose)
+            enemyClickInterval: 200 // Enemy clicks every 200ms (slower)
         };
         
         this.setupEventListeners();
@@ -110,14 +110,24 @@ export default class CombatSystem {
      * @param {Object} data 
      */
     handlePlayerClick(data) {
+        console.log('Player click detected!', data);
+        
         // Find player entity (tagged as 'player')
         const players = this.entityManager.getEntitiesByTag('player');
-        if (players.length === 0) return;
+        if (players.length === 0) {
+            console.log('No player found!');
+            return;
+        }
         
         const player = players[0];
         const combatData = this.activeCombats.get(player.id);
         
-        if (!combatData || combatData.state !== 'active') return;
+        if (!combatData || combatData.state !== 'active') {
+            console.log('No active combat for player');
+            return;
+        }
+        
+        console.log('Processing player click in combat');
         
         // Check click cooldown
         const now = Date.now();
@@ -211,7 +221,16 @@ export default class CombatSystem {
      */
     updateTugPosition(combatData, deltaTime) {
         const dpsDifference = combatData.attackerDPS - combatData.defenderDPS;
-        const tugChange = (dpsDifference / 100) * (deltaTime / 1000);
+        const tugChange = (dpsDifference / 20) * (deltaTime / 1000); // Made 5x more responsive
+        
+        // Debug combat calculations
+        console.log('Combat Debug:', {
+            attackerDPS: combatData.attackerDPS,
+            defenderDPS: combatData.defenderDPS,
+            dpsDifference,
+            tugChange,
+            currentPosition: combatData.tugPosition
+        });
         
         combatData.tugPosition = Math.max(0, Math.min(1, combatData.tugPosition + tugChange));
         

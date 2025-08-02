@@ -117,6 +117,7 @@ export default class DebugUI {
             
             // Category click handler
             categoryBg.on('pointerdown', () => {
+                console.log('Debug menu category clicked:', categoryKey);
                 if (this.expandedCategories.has(categoryKey)) {
                     this.expandedCategories.delete(categoryKey);
                 } else {
@@ -162,6 +163,7 @@ export default class DebugUI {
                     
                     // Item click handler
                     itemBg.on('pointerdown', () => {
+                        console.log('Debug menu item clicked:', item.name, item.event);
                         this.debugSystem.executeTest({
                             event: item.event,
                             data: item.data || {}

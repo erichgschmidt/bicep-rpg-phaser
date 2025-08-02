@@ -91,7 +91,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
             position: { x: 0, y: 0 },
             name: 'Hero',
             startingHealth: 100,
-            startingPower: 1
+            startingPower: 2  // Increased for testing combat
         });
         
         // Initialize player
@@ -135,6 +135,9 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         // Create some initial NPCs near spawn
         this.createInitialNPCs();
+        
+        // Create test enemy for combat debugging
+        this.createTestEnemy();
     }
 
     createBonfireVisual(x, y) {
@@ -163,6 +166,29 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         // Light glow
         const glow = this.add.circle(pixelX, pixelY, 150, 0xffa500, 0.1);
+    }
+
+    createTestEnemy() {
+        // Create a test enemy right next to the player for easy combat testing
+        const testEnemy = EnemyFactory.create(
+            this.systems.entityManager,
+            'Pebble',
+            { x: 1, y: 0 }  // Right next to player at spawn
+        );
+        
+        if (testEnemy) {
+            this.createEntityVisual(testEnemy);
+            console.log('Test enemy created for combat testing at (1,0)');
+            
+            // Add a manual combat starter for testing
+            window.startTestCombat = () => {
+                console.log('Starting test combat manually...');
+                this.eventBus.emit('combat:start', {
+                    attackerId: this.playerId,
+                    defenderId: testEnemy.id
+                });
+            };
+        }
     }
 
     createDebugButton() {
@@ -364,12 +390,17 @@ export default class GameSceneRefactored extends Phaser.Scene {
     createEntityVisual(entity) {
         let visual;
         
+        console.log('Creating visual for entity:', entity.id, 'Tags:', entity.tags);
+        
         // Determine visual creation based on entity type
         if (entity.hasTag('enemy') || entity.hasTag('hostile')) {
+            console.log('Creating enemy visual for:', entity.id);
             visual = BaseEnemy.createVisuals(this, entity);
         } else if (entity.hasTag('neutral')) {
+            console.log('Creating neutral visual for:', entity.id);
             visual = NeutralMob.createVisuals(this, entity);
         } else if (entity.hasTag('player')) {
+            console.log('Creating player visual for:', entity.id);
             visual = Player.createVisuals(this, entity);
         }
         
@@ -542,6 +573,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         // Scene events for clicks
         this.events.on('enemy:clicked', (data) => {
+            console.log('Scene received enemy:clicked', data);
             this.handleEnemyClicked(data);
         });
         
@@ -561,9 +593,21 @@ export default class GameSceneRefactored extends Phaser.Scene {
             targets: visual,
             x: newPosition.x * this.config.gridSize,
             y: newPosition.y * this.config.gridSize,
-            duration: 180,
+            duration: 320,
             ease: 'Cubic.easeInOut',
             onComplete: () => {
+                // Clear moving flag with small delay for smoother movement
+                const entity = this.systems.entityManager.getEntity(entityId);
+                if (entity) {
+                    const position = entity.getComponent('position');
+                    if (position) {
+                        // Add small delay before allowing next movement
+                        setTimeout(() => {
+                            position.moving = false;
+                        }, 50);
+                    }
+                }
+                
                 // Update chunks if needed
                 if (entityId === this.playerId) {
                     this.updateVisibleChunks();
@@ -650,10 +694,12 @@ export default class GameSceneRefactored extends Phaser.Scene {
 
     handleEnemyClicked(data) {
         const { entityId } = data;
+        console.log('handleEnemyClicked called with entityId:', entityId);
         
         // Check if player is adjacent
         const player = this.systems.entityManager.getEntity(this.playerId);
         const enemy = this.systems.entityManager.getEntity(entityId);
+        console.log('Player:', player?.id, 'Enemy:', enemy?.id);
         
         if (!player || !enemy) return;
         
@@ -767,6 +813,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
         this.systems.combatSystem.update(delta);
         this.systems.timeSystem.update(delta);
         this.systems.zoneManager.update(delta);
+        this.systems.aiMovementSystem.update(delta);
         
         // Update UI
         if (this.combatUI) this.combatUI.update(time, delta);
