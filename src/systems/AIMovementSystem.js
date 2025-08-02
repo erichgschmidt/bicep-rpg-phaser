@@ -47,17 +47,24 @@ export default class AIMovementSystem {
         if ((entity.hasTag('enemy') || entity.hasTag('neutral')) && !entity.hasTag('player')) {
             const position = entity.getComponent('position');
             if (position) {
-                this.aiEntities.set(entity.id, {
-                    spawnPoint: { x: position.pixelX || position.x * 32, y: position.pixelY || position.y * 32 },
-                    lastMoveTime: Date.now() + Math.random() * 2000, // Stagger initial movement
-                    isMoving: false,
-                    pauseUntil: 0,
-                    movePattern: this.getMovePattern(entity),
-                    personalityMultiplier: 0.7 + Math.random() * 0.6, // 0.7-1.3x speed modifier
-                    nextMoveInterval: this.getRandomInterval(),
-                    movementStyle: this.getMovementStyle(entity)
-                });
-                console.log(`Added AI behavior to ${entity.id}`);
+                // Wait a frame to ensure visual is created
+                setTimeout(() => {
+                    const visual = this.getEntityVisual(entity.id);
+                    const spawnX = visual ? visual.x : (position.pixelX || position.x * 32);
+                    const spawnY = visual ? visual.y : (position.pixelY || position.y * 32);
+                    
+                    this.aiEntities.set(entity.id, {
+                        spawnPoint: { x: spawnX, y: spawnY },
+                        lastMoveTime: Date.now() + Math.random() * 2000, // Stagger initial movement
+                        isMoving: false,
+                        pauseUntil: 0,
+                        movePattern: this.getMovePattern(entity),
+                        personalityMultiplier: 0.7 + Math.random() * 0.6, // 0.7-1.3x speed modifier
+                        nextMoveInterval: this.getRandomInterval(),
+                        movementStyle: this.getMovementStyle(entity)
+                    });
+                    console.log(`Added AI behavior to ${entity.id} at spawn (${spawnX}, ${spawnY})`);
+                }, 0);
             }
         }
     }
@@ -114,7 +121,15 @@ export default class AIMovementSystem {
     processAIMovement(entity, aiState, now) {
         const position = entity.getComponent('position');
         if (!position) return;
+        
+        // Get visual from scene to ensure we have the actual current position
+        const visual = this.getEntityVisual(entity.id);
+        if (!visual) return;
 
+        // Use visual's actual position as the source of truth
+        const currentX = visual.x;
+        const currentY = visual.y;
+        
         // Free movement with random angles
         let angle = 0;
         let distance = 30 + Math.random() * 50; // 30-80 pixels movement
@@ -126,16 +141,13 @@ export default class AIMovementSystem {
 
             case 'patrol':
                 // Move in a pattern around spawn point
-                const currentPosX = position.pixelX || position.x;
-                const currentPosY = position.pixelY || position.y;
-                
                 const toSpawn = Math.atan2(
-                    aiState.spawnPoint.y - currentPosY,
-                    aiState.spawnPoint.x - currentPosX
+                    aiState.spawnPoint.y - currentY,
+                    aiState.spawnPoint.x - currentX
                 );
                 const distToSpawn = Math.sqrt(
-                    Math.pow(currentPosX - aiState.spawnPoint.x, 2) +
-                    Math.pow(currentPosY - aiState.spawnPoint.y, 2)
+                    Math.pow(currentX - aiState.spawnPoint.x, 2) +
+                    Math.pow(currentY - aiState.spawnPoint.y, 2)
                 );
                 
                 if (distToSpawn > 100) {
@@ -154,11 +166,7 @@ export default class AIMovementSystem {
                 return;
         }
 
-        // Get current pixel position (use visual position if available for smooth continuity)
-        const currentX = position.pixelX || position.x;
-        const currentY = position.pixelY || position.y;
-        
-        // Calculate target position from CURRENT position, not spawn
+        // Calculate target position from visual's current position
         const targetX = currentX + Math.cos(angle) * distance;
         const targetY = currentY + Math.sin(angle) * distance;
 
@@ -256,6 +264,17 @@ export default class AIMovementSystem {
         const base = this.config.moveDuration.base;
         const variance = this.config.moveDuration.variance;
         return base + (Math.random() * variance * 2 - variance);
+    }
+
+    getEntityVisual(entityId) {
+        // Get visual from the game scene
+        if (window.gameCore && window.gameCore.phaserGame) {
+            const scene = window.gameCore.phaserGame.scene.getScene('GameSceneRefactored');
+            if (scene && scene.entityVisuals) {
+                return scene.entityVisuals.get(entityId);
+            }
+        }
+        return null;
     }
 
     destroy() {

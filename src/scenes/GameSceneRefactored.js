@@ -722,6 +722,17 @@ export default class GameSceneRefactored extends Phaser.Scene {
         const entity = this.systems.entityManager.getEntity(entityId);
         if (!entity) return;
         
+        // Update position to current visual position BEFORE starting tween
+        const position = entity.getComponent('position');
+        if (position) {
+            position.x = visual.x;
+            position.y = visual.y;
+            position.pixelX = visual.x;
+            position.pixelY = visual.y;
+            position.worldX = Math.floor(visual.x / this.config.gridSize);
+            position.worldY = Math.floor(visual.y / this.config.gridSize);
+        }
+        
         // Smooth tween to target position
         this.tweens.add({
             targets: visual,
@@ -730,8 +741,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
             duration: duration || 500,
             ease: 'Sine.easeInOut',
             onUpdate: () => {
-                // Update position component during movement
-                const position = entity.getComponent('position');
+                // Keep position in sync during movement
                 if (position) {
                     position.x = visual.x;
                     position.y = visual.y;
