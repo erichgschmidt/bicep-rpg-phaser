@@ -70,8 +70,8 @@ export default class ZoneManager {
         // Player death
         this.eventBus.on('player:died', this.handlePlayerDeath.bind(this));
         
-        // Weather updates
-        this.eventBus.on('weather:update', this.updateWeather.bind(this));
+        // Weather updates (TODO: implement updateWeather method)
+        // this.eventBus.on('weather:update', this.updateWeather.bind(this));
         
         // Entity creation
         this.eventBus.on('entity:created', this.checkInitialZone.bind(this));

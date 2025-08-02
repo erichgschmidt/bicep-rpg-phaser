@@ -12,6 +12,7 @@ module.exports = {
     static: './dist',
     open: true,
     hot: true,
+    port: 8080,
   },
   plugins: [
     new HtmlWebpackPlugin({
