@@ -48,7 +48,7 @@ export default class AIMovementSystem {
             const position = entity.getComponent('position');
             if (position) {
                 this.aiEntities.set(entity.id, {
-                    spawnPoint: { x: position.x, y: position.y },
+                    spawnPoint: { x: position.pixelX || position.x * 32, y: position.pixelY || position.y * 32 },
                     lastMoveTime: Date.now() + Math.random() * 2000, // Stagger initial movement
                     isMoving: false,
                     pauseUntil: 0,
@@ -115,51 +115,75 @@ export default class AIMovementSystem {
         const position = entity.getComponent('position');
         if (!position) return;
 
-        let targetX = position.x;
-        let targetY = position.y;
+        // Free movement with random angles
+        let angle = 0;
+        let distance = 30 + Math.random() * 50; // 30-80 pixels movement
 
         switch (aiState.movePattern) {
             case 'wander':
-                const wanderDirection = this.getRandomDirection();
-                targetX += wanderDirection.x;
-                targetY += wanderDirection.y;
+                angle = Math.random() * Math.PI * 2; // Random direction
                 break;
 
             case 'patrol':
-                const patrolDirection = this.getPatrolDirection(position, aiState.spawnPoint);
-                targetX += patrolDirection.x;
-                targetY += patrolDirection.y;
-                break;
-
-            case 'erratic':
-                // More random movement
-                if (Math.random() < 0.7) {
-                    const erraticDir = this.getRandomDirection();
-                    targetX += erraticDir.x * (Math.random() < 0.5 ? 1 : 2);
-                    targetY += erraticDir.y * (Math.random() < 0.5 ? 1 : 2);
+                // Move in a pattern around spawn point
+                const toSpawn = Math.atan2(
+                    aiState.spawnPoint.y - position.pixelY,
+                    aiState.spawnPoint.x - position.pixelX
+                );
+                const distToSpawn = Math.sqrt(
+                    Math.pow(position.pixelX - aiState.spawnPoint.x, 2) +
+                    Math.pow(position.pixelY - aiState.spawnPoint.y, 2)
+                );
+                
+                if (distToSpawn > 100) {
+                    angle = toSpawn; // Move back towards spawn
+                } else {
+                    angle = toSpawn + Math.PI/2 + (Math.random() - 0.5); // Circle around spawn
                 }
                 break;
 
+            case 'erratic':
+                angle = Math.random() * Math.PI * 2;
+                distance = 20 + Math.random() * 100; // More varied distance
+                break;
+
             default:
-                return; // No movement for unknown patterns
+                return;
         }
+
+        // Calculate target position
+        const targetX = position.pixelX + Math.cos(angle) * distance;
+        const targetY = position.pixelY + Math.sin(angle) * distance;
 
         // Check distance from spawn point
-        const distanceFromSpawn = Math.abs(targetX - aiState.spawnPoint.x) + 
-                                 Math.abs(targetY - aiState.spawnPoint.y);
+        const distanceFromSpawn = Math.sqrt(
+            Math.pow(targetX - aiState.spawnPoint.x, 2) +
+            Math.pow(targetY - aiState.spawnPoint.y, 2)
+        );
         
-        if (distanceFromSpawn > this.config.maxWanderDistance) {
-            // Move back towards spawn instead
-            targetX = position.x + Math.sign(aiState.spawnPoint.x - position.x);
-            targetY = position.y + Math.sign(aiState.spawnPoint.y - position.y);
+        if (distanceFromSpawn > this.config.maxWanderDistance * 32) { // Convert grid to pixels
+            // Move back towards spawn
+            const backAngle = Math.atan2(
+                aiState.spawnPoint.y - position.pixelY,
+                aiState.spawnPoint.x - position.pixelX
+            );
+            const finalX = position.pixelX + Math.cos(backAngle) * distance;
+            const finalY = position.pixelY + Math.sin(backAngle) * distance;
+            
+            this.eventBus.emit('entity:move-free', {
+                entityId: entity.id,
+                targetX: finalX,
+                targetY: finalY,
+                duration: this.getRandomMoveDuration() * aiState.personalityMultiplier
+            });
+        } else {
+            this.eventBus.emit('entity:move-free', {
+                entityId: entity.id,
+                targetX: targetX,
+                targetY: targetY,
+                duration: this.getRandomMoveDuration() * aiState.personalityMultiplier
+            });
         }
-
-        // Request movement
-        this.eventBus.emit('entity:request-move', {
-            entityId: entity.id,
-            oldPosition: { x: position.x, y: position.y },
-            newPosition: { x: targetX, y: targetY }
-        });
 
         // Update AI state with varied timing
         aiState.lastMoveTime = now;
@@ -218,6 +242,13 @@ export default class AIMovementSystem {
             return styles[Math.floor(Math.random() * styles.length)];
         }
         return 'normal';
+    }
+
+    getRandomMoveDuration() {
+        // Generate random movement duration
+        const base = this.config.moveDuration.base;
+        const variance = this.config.moveDuration.variance;
+        return base + (Math.random() * variance * 2 - variance);
     }
 
     destroy() {

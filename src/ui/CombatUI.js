@@ -170,6 +170,8 @@ export default class CombatUI {
     handleClick() {
         if (!this.isVisible || !this.currentCombat) return;
         
+        console.log('CombatUI: Click detected! Current combat:', this.currentCombat);
+        
         this.clickCount++;
         this.lastClickTime = Date.now();
         

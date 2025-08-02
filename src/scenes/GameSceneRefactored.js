@@ -558,6 +558,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
     setupEventListeners() {
         // Entity visual updates
         this.eventBus.on('entity:moved', this.handleEntityMoved.bind(this));
+        this.eventBus.on('entity:move-free', this.handleEntityMoveFree.bind(this));
         this.eventBus.on('entity:destroyed', this.handleEntityDestroyed.bind(this));
         this.eventBus.on('entity:created', this.handleEntityCreated.bind(this));
         
@@ -693,6 +694,37 @@ export default class GameSceneRefactored extends Phaser.Scene {
                 // Update chunks if needed
                 if (entityId === this.playerId) {
                     this.updateVisibleChunks();
+                }
+            }
+        });
+    }
+
+    handleEntityMoveFree(data) {
+        const { entityId, targetX, targetY, duration } = data;
+        const visual = this.entityVisuals.get(entityId);
+        
+        if (!visual) return;
+        
+        const entity = this.systems.entityManager.getEntity(entityId);
+        if (!entity) return;
+        
+        // Smooth tween to target position
+        this.tweens.add({
+            targets: visual,
+            x: targetX,
+            y: targetY,
+            duration: duration || 500,
+            ease: 'Sine.easeInOut',
+            onUpdate: () => {
+                // Update position component during movement
+                const position = entity.getComponent('position');
+                if (position) {
+                    position.x = visual.x;
+                    position.y = visual.y;
+                    position.pixelX = visual.x;
+                    position.pixelY = visual.y;
+                    position.worldX = Math.floor(visual.x / this.config.gridSize);
+                    position.worldY = Math.floor(visual.y / this.config.gridSize);
                 }
             }
         });
@@ -845,30 +877,8 @@ export default class GameSceneRefactored extends Phaser.Scene {
     }
 
     updateGridDisplay() {
+        // Grid display removed for free movement
         this.gridGraphics.clear();
-        this.gridGraphics.lineStyle(1, 0x444444, 0.3);
-        
-        const worldView = this.cameras.main.worldView;
-        const gridSize = this.config.gridSize;
-        
-        const startX = Math.floor(worldView.left / gridSize) * gridSize;
-        const startY = Math.floor(worldView.top / gridSize) * gridSize;
-        const endX = Math.ceil(worldView.right / gridSize) * gridSize;
-        const endY = Math.ceil(worldView.bottom / gridSize) * gridSize;
-        
-        // Vertical lines
-        for (let x = startX; x <= endX; x += gridSize) {
-            this.gridGraphics.moveTo(x, startY);
-            this.gridGraphics.lineTo(x, endY);
-        }
-        
-        // Horizontal lines
-        for (let y = startY; y <= endY; y += gridSize) {
-            this.gridGraphics.moveTo(startX, y);
-            this.gridGraphics.lineTo(endX, y);
-        }
-        
-        this.gridGraphics.strokePath();
     }
 
     addIdleAnimation(visual, entity) {
@@ -937,6 +947,34 @@ export default class GameSceneRefactored extends Phaser.Scene {
         }
     }
 
+    checkCombatProximity(player, position) {
+        // Check for nearby hostile entities
+        const hostileEntities = this.systems.entityManager.getEntitiesByTag('hostile');
+        const combatRange = 40; // pixels
+        
+        for (const enemy of hostileEntities) {
+            const enemyPosition = enemy.getComponent('position');
+            if (enemyPosition) {
+                const distance = Math.sqrt(
+                    Math.pow(position.x - enemyPosition.pixelX, 2) + 
+                    Math.pow(position.y - enemyPosition.pixelY, 2)
+                );
+                
+                if (distance < combatRange) {
+                    // Start combat if not already in combat
+                    if (!this.systems.combatSystem.isInCombat(player.id)) {
+                        console.log('Combat proximity triggered!');
+                        this.eventBus.emit('combat:start', {
+                            attackerId: player.id,
+                            defenderId: enemy.id
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     getChunkKey(x, y) {
         return `${x},${y}`;
     }
@@ -1000,24 +1038,51 @@ export default class GameSceneRefactored extends Phaser.Scene {
         if (!player) return;
         
         const position = player.getComponent('position');
-        if (!position || position.moving) return;
+        if (!position) return;
+        
+        const playerData = player.getComponent('playerData');
+        const moveSpeed = (playerData?.moveSpeed || 150) * delta / 1000; // pixels per second
         
         let dx = 0, dy = 0;
         
+        // Allow diagonal movement
         if (cursors.left.isDown || wasd.A.isDown) dx = -1;
         else if (cursors.right.isDown || wasd.D.isDown) dx = 1;
         
         if (cursors.up.isDown || wasd.W.isDown) dy = -1;
         else if (cursors.down.isDown || wasd.S.isDown) dy = 1;
         
+        // Normalize diagonal movement
+        if (dx !== 0 && dy !== 0) {
+            dx *= 0.707; // 1/sqrt(2)
+            dy *= 0.707;
+        }
+        
         if (dx !== 0 || dy !== 0) {
-            // Only allow one direction
-            if (dx !== 0 && dy !== 0) {
-                if (Math.random() < 0.5) dy = 0;
-                else dx = 0;
-            }
+            // Update position directly for free movement
+            const newX = position.x + dx * moveSpeed;
+            const newY = position.y + dy * moveSpeed;
             
-            Player.move(player, dx, dy, this.eventBus);
+            // Check for collisions or boundaries here if needed
+            const visual = this.entityVisuals.get(this.playerId);
+            if (visual) {
+                visual.x = newX;
+                visual.y = newY;
+                
+                // Update position component
+                position.x = newX;
+                position.y = newY;
+                position.pixelX = newX;
+                position.pixelY = newY;
+                position.worldX = Math.floor(newX / this.config.gridSize);
+                position.worldY = Math.floor(newY / this.config.gridSize);
+                
+                // Check for combat encounters based on distance
+                this.checkCombatProximity(player, position);
+                
+                // Update chunks if needed
+                this.updateVisibleChunks();
+            }
         }
         
         // Debug menu

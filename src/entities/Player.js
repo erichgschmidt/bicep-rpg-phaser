@@ -54,8 +54,8 @@ export default class Player {
             // Player-specific components
             playerData: {
                 name: name,
-                moveSpeed: 1.2, // Speed multiplier for smooth movement
-                moveCooldown: 150 // Reduced cooldown for more responsive feel
+                moveSpeed: 200, // Pixels per second for free movement
+                moveCooldown: 0 // No cooldown needed for free movement
             },
             
             // Progression component (initialized by ProgressionSystem)
