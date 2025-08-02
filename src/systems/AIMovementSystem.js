@@ -9,12 +9,22 @@ export default class AIMovementSystem {
         this.eventBus = eventBus;
         this.entityManager = entityManager;
         
-        // AI configuration
+        // AI configuration - varied for more natural movement
         this.config = {
-            wanderInterval: 2000,  // Move every 2 seconds
-            wanderChance: 0.3,     // 30% chance to move each interval
-            maxWanderDistance: 3,  // Maximum tiles from spawn point
-            pauseAfterMove: 1000   // Pause after moving
+            wanderInterval: {
+                base: 1500,        // Base interval
+                variance: 1000     // Random variance (±500ms)
+            },
+            wanderChance: 0.4,     // 40% chance to move each interval
+            maxWanderDistance: 4,  // Maximum tiles from spawn point
+            pauseAfterMove: {
+                base: 800,         // Base pause
+                variance: 600      // Random variance (±300ms)
+            },
+            moveDuration: {
+                base: 400,         // Base movement duration
+                variance: 200      // Random variance (±100ms)
+            }
         };
         
         // AI state tracking
@@ -39,10 +49,13 @@ export default class AIMovementSystem {
             if (position) {
                 this.aiEntities.set(entity.id, {
                     spawnPoint: { x: position.x, y: position.y },
-                    lastMoveTime: Date.now(),
+                    lastMoveTime: Date.now() + Math.random() * 2000, // Stagger initial movement
                     isMoving: false,
                     pauseUntil: 0,
-                    movePattern: this.getMovePattern(entity)
+                    movePattern: this.getMovePattern(entity),
+                    personalityMultiplier: 0.7 + Math.random() * 0.6, // 0.7-1.3x speed modifier
+                    nextMoveInterval: this.getRandomInterval(),
+                    movementStyle: this.getMovementStyle(entity)
                 });
                 console.log(`Added AI behavior to ${entity.id}`);
             }
@@ -82,8 +95,8 @@ export default class AIMovementSystem {
                 return;
             }
 
-            // Check if it's time to consider moving
-            if (now - aiState.lastMoveTime < this.config.wanderInterval) {
+            // Check if it's time to consider moving (using individual intervals)
+            if (now - aiState.lastMoveTime < aiState.nextMoveInterval) {
                 return;
             }
 
@@ -148,9 +161,10 @@ export default class AIMovementSystem {
             newPosition: { x: targetX, y: targetY }
         });
 
-        // Update AI state
+        // Update AI state with varied timing
         aiState.lastMoveTime = now;
-        aiState.pauseUntil = now + this.config.pauseAfterMove;
+        aiState.nextMoveInterval = this.getRandomInterval() * aiState.personalityMultiplier;
+        aiState.pauseUntil = now + this.getRandomPause() * aiState.personalityMultiplier;
     }
 
     getRandomDirection() {
@@ -178,6 +192,32 @@ export default class AIMovementSystem {
             // Move away from spawn
             return this.getRandomDirection();
         }
+    }
+
+    getRandomInterval() {
+        // Generate random interval with variance
+        const base = this.config.wanderInterval.base;
+        const variance = this.config.wanderInterval.variance;
+        return base + (Math.random() * variance * 2 - variance);
+    }
+
+    getRandomPause() {
+        // Generate random pause with variance
+        const base = this.config.pauseAfterMove.base;
+        const variance = this.config.pauseAfterMove.variance;
+        return base + (Math.random() * variance * 2 - variance);
+    }
+
+    getMovementStyle(entity) {
+        // Different movement styles for different entity types
+        if (entity.hasTag('enemy')) {
+            const styles = ['aggressive', 'lurking', 'restless'];
+            return styles[Math.floor(Math.random() * styles.length)];
+        } else if (entity.hasTag('neutral')) {
+            const styles = ['calm', 'curious', 'lazy'];
+            return styles[Math.floor(Math.random() * styles.length)];
+        }
+        return 'normal';
     }
 
     destroy() {

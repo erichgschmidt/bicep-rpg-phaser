@@ -406,6 +406,9 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         if (visual) {
             this.entityVisuals.set(entity.id, visual);
+            
+            // Add subtle idle animation for more life
+            this.addIdleAnimation(visual, entity);
         }
     }
 
@@ -588,23 +591,102 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         if (!visual) return;
         
-        // Tween to new position
-        this.tweens.add({
-            targets: visual,
-            x: newPosition.x * this.config.gridSize,
-            y: newPosition.y * this.config.gridSize,
+        const entity = this.systems.entityManager.getEntity(entityId);
+        if (!entity) return;
+        
+        // Get movement style for varied animation
+        const movementConfig = this.getMovementConfig(entity);
+        
+        // Add subtle anticipation for more organic feel
+        if (movementConfig.anticipation > 0) {
+            const anticipationX = oldPosition.x * this.config.gridSize + (Math.random() - 0.5) * 4;
+            const anticipationY = oldPosition.y * this.config.gridSize + (Math.random() - 0.5) * 4;
+            
+            this.tweens.add({
+                targets: visual,
+                x: anticipationX,
+                y: anticipationY,
+                duration: movementConfig.anticipation,
+                ease: 'Quad.easeOut',
+                onComplete: () => {
+                    // Main movement tween
+                    this.performMainMovement(visual, newPosition, entityId, movementConfig);
+                }
+            });
+        } else {
+            // Direct movement
+            this.performMainMovement(visual, newPosition, entityId, movementConfig);
+        }
+    }
+
+    getMovementConfig(entity) {
+        // Different movement styles based on entity type
+        if (entity.hasTag('player')) {
+            return {
+                duration: 280 + Math.random() * 80, // 280-360ms
+                ease: 'Quad.easeInOut',
+                anticipation: 0,
+                overshoot: 0
+            };
+        } else if (entity.hasTag('enemy')) {
+            const enemyData = entity.getComponent('enemyData');
+            const baseSpeed = enemyData?.moveSpeed || 1;
+            
+            return {
+                duration: (400 - baseSpeed * 50) + Math.random() * 150, // Variable based on enemy type
+                ease: Math.random() < 0.3 ? 'Back.easeOut' : 'Cubic.easeInOut',
+                anticipation: Math.random() < 0.2 ? 30 + Math.random() * 40 : 0,
+                overshoot: Math.random() < 0.1 ? 2 : 0
+            };
+        } else if (entity.hasTag('neutral')) {
+            return {
+                duration: 450 + Math.random() * 200, // Slower, more leisurely
+                ease: Math.random() < 0.4 ? 'Sine.easeInOut' : 'Quad.easeInOut',
+                anticipation: Math.random() < 0.3 ? 40 + Math.random() * 60 : 0,
+                overshoot: 0
+            };
+        }
+        
+        // Default
+        return {
             duration: 320,
             ease: 'Cubic.easeInOut',
+            anticipation: 0,
+            overshoot: 0
+        };
+    }
+
+    performMainMovement(visual, newPosition, entityId, config) {
+        const targetX = newPosition.x * this.config.gridSize;
+        const targetY = newPosition.y * this.config.gridSize;
+        
+        this.tweens.add({
+            targets: visual,
+            x: targetX + config.overshoot,
+            y: targetY + config.overshoot,
+            duration: config.duration,
+            ease: config.ease,
             onComplete: () => {
-                // Clear moving flag with small delay for smoother movement
+                // Settle back if there was overshoot
+                if (config.overshoot > 0) {
+                    this.tweens.add({
+                        targets: visual,
+                        x: targetX,
+                        y: targetY,
+                        duration: 80,
+                        ease: 'Quad.easeOut'
+                    });
+                }
+                
+                // Clear moving flag with varied delay
                 const entity = this.systems.entityManager.getEntity(entityId);
                 if (entity) {
                     const position = entity.getComponent('position');
                     if (position) {
-                        // Add small delay before allowing next movement
+                        const delay = 30 + Math.random() * 40; // 30-70ms variance
                         setTimeout(() => {
                             position.moving = false;
-                        }, 50);
+                        }, delay);
                     }
                 }
                 
@@ -787,6 +869,72 @@ export default class GameSceneRefactored extends Phaser.Scene {
         }
         
         this.gridGraphics.strokePath();
+    }
+
+    addIdleAnimation(visual, entity) {
+        // Add subtle breathing/idle animation for more organic feel
+        const animationType = entity.hasTag('player') ? 'breathing' : 
+                             entity.hasTag('enemy') ? 'menacing' : 'gentle';
+        
+        switch (animationType) {
+            case 'breathing':
+                // Subtle scale breathing
+                this.tweens.add({
+                    targets: visual,
+                    scaleX: 1.02,
+                    scaleY: 0.98,
+                    duration: 1500 + Math.random() * 1000,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+                break;
+                
+            case 'menacing':
+                // Slightly aggressive idle movement
+                this.tweens.add({
+                    targets: visual,
+                    angle: Math.random() < 0.5 ? 2 : -2,
+                    duration: 2000 + Math.random() * 1500,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1,
+                    delay: Math.random() * 3000
+                });
+                break;
+                
+            case 'gentle':
+                // Very subtle gentle sway
+                this.tweens.add({
+                    targets: visual,
+                    y: visual.y + 1,
+                    duration: 3000 + Math.random() * 2000,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1,
+                    delay: Math.random() * 4000
+                });
+                break;
+        }
+        
+        // Random occasional blink or small movement
+        if (Math.random() < 0.3) {
+            this.time.addEvent({
+                delay: 5000 + Math.random() * 10000,
+                callback: () => {
+                    if (visual && visual.active) {
+                        this.tweens.add({
+                            targets: visual,
+                            alpha: 0.7,
+                            duration: 100,
+                            yoyo: true,
+                            ease: 'Quad.easeInOut'
+                        });
+                    }
+                },
+                loop: true
+            });
+        }
     }
 
     getChunkKey(x, y) {
