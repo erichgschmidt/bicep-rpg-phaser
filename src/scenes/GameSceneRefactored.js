@@ -137,7 +137,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
         this.createInitialNPCs();
         
         // Create test enemy for combat debugging
-        this.createTestEnemy();
+        // this.createTestEnemy(); // Commented out - was spawning enemy in safe zone
     }
 
     createBonfireVisual(x, y) {
