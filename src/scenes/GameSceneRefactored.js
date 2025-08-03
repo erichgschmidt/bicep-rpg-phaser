@@ -7,7 +7,7 @@ import Player from '../entities/Player.js';
 import { EnemyFactory } from '../entities/enemies/index.js';
 import { NeutralFactory } from '../entities/neutrals/index.js';
 import BaseEnemy from '../entities/enemies/BaseEnemy.js';
-import NeutralMob from '../entities/neutrals/NeutralMob.js';
+import BaseNeutral from '../entities/neutrals/BaseNeutral.js';
 import CombatUI from '../ui/CombatUI.js';
 import DebugUI from '../ui/DebugUI.js';
 
@@ -405,7 +405,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
             visual = BaseEnemy.createVisuals(this, entity);
         } else if (entity.hasTag('neutral')) {
             console.log('Creating neutral visual for:', entity.id);
-            visual = NeutralMob.createVisuals(this, entity);
+            visual = BaseNeutral.createVisuals(this, entity);
         } else if (entity.hasTag('player')) {
             console.log('Creating player visual for:', entity.id);
             visual = Player.createVisuals(this, entity);
@@ -708,11 +708,13 @@ export default class GameSceneRefactored extends Phaser.Scene {
         const { entityId, canTalk, canTrade } = data;
         
         if (canTalk || canTrade) {
-            NeutralMob.interact(
-                this.systems.entityManager.getEntity(entityId),
-                this.playerId,
-                this.eventBus
-            );
+            // Handle interaction through event system
+            this.eventBus.emit('entity:interact', {
+                entityId: entityId,
+                playerId: this.playerId,
+                canTalk: canTalk,
+                canTrade: canTrade
+            });
         }
     }
 
@@ -906,7 +908,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
             if (entity.hasTag('enemy')) {
                 BaseEnemy.updateVisuals(visual, entity);
             } else if (entity.hasTag('neutral')) {
-                NeutralMob.updateVisuals(visual, entity);
+                BaseNeutral.updateVisuals(visual, entity);
             } else if (entity.hasTag('player')) {
                 Player.updateVisuals(visual, entity);
             }

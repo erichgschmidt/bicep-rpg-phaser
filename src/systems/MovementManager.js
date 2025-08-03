@@ -69,8 +69,8 @@ export default class MovementManager {
         // Determine movement pattern
         let movePattern = 'wander';
         if (entity.hasTag('enemy')) {
-            const enemyData = entity.getComponent('enemyData');
-            movePattern = enemyData?.movePattern || 'wander';
+            const enemyAI = entity.getComponent('enemyAI');
+            movePattern = enemyAI?.movePattern || 'wander';
         } else if (entity.hasTag('neutral')) {
             const neutralAI = entity.getComponent('neutralAI');
             movePattern = neutralAI?.movePattern || 'wander';
