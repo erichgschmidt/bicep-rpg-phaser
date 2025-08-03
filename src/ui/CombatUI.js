@@ -220,7 +220,11 @@ export default class CombatUI {
             scale: 2,
             alpha: 0,
             duration: 300,
-            onComplete: () => clickEffect.destroy()
+            onComplete: () => {
+                if (clickEffect && clickEffect.active) {
+                    clickEffect.destroy();
+                }
+            }
         });
     }
     
@@ -336,8 +340,10 @@ export default class CombatUI {
             duration: 300,
             ease: 'Back.easeIn',
             onComplete: () => {
-                this.container.destroy();
-                this.container = null;
+                if (this.container) {
+                    this.container.destroy();
+                    this.container = null;
+                }
                 this.currentCombat = null;
             }
         });
