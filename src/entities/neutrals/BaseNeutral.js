@@ -1,31 +1,31 @@
 /**
- * BaseNeutral - Base class for all neutral entities
- * Exactly mirrors BaseEnemy structure for consistent movement
+ * BaseNeutral - Base class for all neutral types
+ * Exact copy of BaseEnemy pattern but for neutral entities
  */
 export default class BaseNeutral {
     /**
-     * Get base components for neutral entities
-     * @param {Object} config 
-     * @returns {Object} Components
+     * Create base neutral configuration
+     * @param {Object} config - Neutral-specific configuration
+     * @returns {Object} Component configuration for entity
      */
     static getBaseComponents(config) {
         const {
             position = { x: 0, y: 0 },
             name = 'Neutral',
             color = 0x808080,
-            faction = 'neutral',
+            power = 0,
             health = 50,
-            moveSpeed = 400,      // Time between moves (like enemies)
+            moveSpeed = 300,
             movePattern = 'wander',
             pauseChance = 0.5,
-            interactionRange = 2,
-            canTalk = true,
+            lootTable = [],
+            canTalk = false,
             canTrade = false,
             dialogues = []
         } = config;
 
         return {
-            // Position component (exactly like enemies)
+            // Core components - EXACTLY like enemies
             position: {
                 x: position.x,
                 y: position.y,
@@ -36,118 +36,130 @@ export default class BaseNeutral {
                 moving: false
             },
 
-            // Health component
+            // Combat components
             health: {
                 current: health,
                 max: health
             },
 
-            // Visual components (similar to enemies but different colors)
+            power: {
+                value: power
+            },
+
+            // Visual components
             appearance: {
                 type: 'neutral',
                 name: name,
                 color: color,
-                strokeColor: 0xffffff,
+                strokeColor: 0x00ff00,  // Green for neutrals
                 strokeWidth: 2,
                 radius: 15,
                 armColor: color,
-                armLength: 20,
+                armLength: 20,  // Smaller than enemies
                 armWidth: 5
             },
 
-            // AI components (exactly like enemyAI)
-            neutralAI: {
+            // AI components - EXACTLY like enemyAI
+            enemyAI: {  // Use enemyAI component name so MovementManager works
                 moveSpeed: moveSpeed + (Math.random() * 100 - 50), // Add variation
                 movePattern: movePattern,
                 pauseChance: pauseChance,
                 nextMoveTime: 0,
                 moveDirection: { dx: 0, dy: -1 },
                 pauseDuration: 0,
-                interactionRange: interactionRange,
-                state: 'idle'
+                aggroRange: 0,  // No aggro for neutrals
+                currentTarget: null
             },
 
-            // Faction component
-            faction: {
-                faction: faction,
-                reputation: 0
-            },
-
-            // Interaction data
-            interactionData: {
+            // Neutral-specific data
+            neutralData: {
+                type: name,
+                baseType: config.baseType || name,
+                tier: 1,
                 canTalk: canTalk,
                 canTrade: canTrade,
-                dialogues: dialogues
+                dialogues: dialogues,
+                lootTable: lootTable
             }
         };
     }
 
     /**
-     * Create neutral visual representation (exactly like enemies)
+     * Create neutral visual representation - EXACTLY like enemies
      * @param {Phaser.Scene} scene 
-     * @param {Entity} entity 
+     * @param {Entity} neutralEntity 
      * @returns {Phaser.GameObjects.Container}
      */
-    static createVisuals(scene, entity) {
-        const position = entity.getComponent('position');
-        const appearance = entity.getComponent('appearance');
-        
-        // Create container at pixel position
+    static createVisuals(scene, neutralEntity) {
+        const position = neutralEntity.getComponent('position');
+        const appearance = neutralEntity.getComponent('appearance');
+
+        // Create container - EXACTLY like enemies
         const container = scene.add.container(position.pixelX, position.pixelY);
-        
-        // Body
+
+        // Neutral body
         const body = scene.add.circle(0, 0, appearance.radius, appearance.color);
         body.setStrokeStyle(appearance.strokeWidth, appearance.strokeColor);
         body.setInteractive();
-        
-        // Arm (smaller than enemies)
+
+        // Neutral arm
         const arm = scene.add.rectangle(15, 0, appearance.armLength, appearance.armWidth, appearance.armColor);
         arm.setOrigin(0, 0.5);
-        
-        // Name
+
+        // Neutral name
         const nameText = scene.add.text(0, -25, appearance.name, {
             fontSize: '12px',
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 2
         }).setOrigin(0.5);
-        
+
         // Health bar background
         const healthBarBg = scene.add.rectangle(0, 25, 40, 6, 0x000000);
-        const healthBar = scene.add.rectangle(0, 25, 40, 6, 0x00ff00);
         
+        // Health bar
+        const healthBar = scene.add.rectangle(0, 25, 40, 6, 0x00ff00);
+
         // Add all to container
         container.add([body, arm, nameText, healthBarBg, healthBar]);
-        
+
         // Store references
         container.setData('body', body);
         container.setData('arm', arm);
         container.setData('healthBar', healthBar);
-        container.setData('entityId', entity.id);
-        
-        // Click handler
+        container.setData('entityId', neutralEntity.id);
+
+        // Set up interaction
         body.on('pointerdown', () => {
-            const canTalk = entity.getComponent('interactionData')?.canTalk;
-            const canTrade = entity.getComponent('interactionData')?.canTrade;
-            
+            console.log('Neutral clicked!', neutralEntity.id);
+            const neutralData = neutralEntity.getComponent('neutralData');
             scene.events.emit('neutral:clicked', {
-                entityId: entity.id,
-                canTalk,
-                canTrade
+                entityId: neutralEntity.id,
+                canTalk: neutralData?.canTalk,
+                canTrade: neutralData?.canTrade
             });
         });
-        
+
+        body.on('pointerover', () => {
+            body.setScale(1.1);
+        });
+
+        body.on('pointerout', () => {
+            body.setScale(1);
+        });
+
         return container;
     }
 
     /**
-     * Update neutral visual
+     * Update neutral visual state - EXACTLY like enemies
      * @param {Phaser.GameObjects.Container} container 
-     * @param {Entity} entity 
+     * @param {Entity} neutralEntity 
      */
-    static updateVisuals(container, entity) {
-        const health = entity.getComponent('health');
-        
+    static updateVisuals(container, neutralEntity) {
+        const health = neutralEntity.getComponent('health');
+        const position = neutralEntity.getComponent('position');
+
         // Update health bar
         const healthBar = container.getData('healthBar');
         if (healthBar && health) {
@@ -155,6 +167,7 @@ export default class BaseNeutral {
             healthBar.setScale(healthPercent, 1);
             healthBar.x = (healthPercent - 1) * 20;
             
+            // Color based on health
             if (healthPercent > 0.6) {
                 healthBar.setFillStyle(0x00ff00);
             } else if (healthPercent > 0.3) {
@@ -162,6 +175,38 @@ export default class BaseNeutral {
             } else {
                 healthBar.setFillStyle(0xff0000);
             }
+        }
+
+        // Update position - CRITICAL for movement
+        if (position) {
+            container.x = position.pixelX;
+            container.y = position.pixelY;
+        }
+    }
+
+    /**
+     * Handle neutral interaction
+     * @param {Entity} neutralEntity 
+     * @param {EventBus} eventBus 
+     */
+    static handleInteraction(neutralEntity, eventBus) {
+        const neutralData = neutralEntity.getComponent('neutralData');
+        const position = neutralEntity.getComponent('position');
+
+        if (neutralData?.canTalk && neutralData.dialogues.length > 0) {
+            const dialogue = neutralData.dialogues[Math.floor(Math.random() * neutralData.dialogues.length)];
+            eventBus.emit('dialogue:show', {
+                entityId: neutralEntity.id,
+                text: dialogue,
+                position: position
+            });
+        }
+
+        if (neutralData?.canTrade) {
+            eventBus.emit('shop:open', {
+                entityId: neutralEntity.id,
+                shopType: neutralData.type
+            });
         }
     }
 }

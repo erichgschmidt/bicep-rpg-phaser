@@ -42,7 +42,7 @@ export default class MovementManager {
         const { entity } = data;
         
         // Register all non-player entities for movement
-        if (!entity.hasTag('player') && (entity.hasTag('enemy') || entity.hasTag('neutral'))) {
+        if (!entity.hasTag('player') && entity.hasTag('enemy')) {
             // Wait one frame to ensure visual is created
             setTimeout(() => {
                 this.registerEntity(entity);
@@ -71,9 +71,6 @@ export default class MovementManager {
         if (entity.hasTag('enemy')) {
             const enemyAI = entity.getComponent('enemyAI');
             movePattern = enemyAI?.movePattern || 'wander';
-        } else if (entity.hasTag('neutral')) {
-            const neutralAI = entity.getComponent('neutralAI');
-            movePattern = neutralAI?.movePattern || 'wander';
         }
         
         // Create movement data

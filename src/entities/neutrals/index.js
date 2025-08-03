@@ -1,118 +1,98 @@
 /**
- * Neutral entity definitions
- * Built exactly like enemy entities for consistent movement
+ * Neutral entity factory and definitions
+ * Using EXACT same pattern as enemies for consistent movement
  */
 import BaseNeutral from './BaseNeutral.js';
 
-// Wildlife entities
+// Wildlife neutrals
 export class Rabbit {
     static create(entityManager, position) {
-        const config = {
+        const components = BaseNeutral.getBaseComponents({
             position,
             name: 'Rabbit',
             color: 0x8b7355,
-            faction: 'wildlife',
             health: 20,
-            moveSpeed: 200,
+            moveSpeed: 200,  // Fast movement interval
             movePattern: 'erratic',
             pauseChance: 0.7,
             canTalk: false,
-            canTrade: false,
-            dialogues: []
-        };
+            canTrade: false
+        });
 
-        const components = BaseNeutral.getBaseComponents(config);
-        const entity = entityManager.createEntity(components, ['neutral', 'wildlife', 'rabbit']);
-        
-        return entity;
+        // Create with 'enemy' tag too so MovementManager picks it up
+        return entityManager.createEntity(components, ['neutral', 'wildlife', 'enemy']);
     }
 }
 
 export class Deer {
     static create(entityManager, position) {
-        const config = {
+        const components = BaseNeutral.getBaseComponents({
             position,
             name: 'Deer',
-            color: 0xdaa520,
-            faction: 'wildlife',
+            color: 0xcd853f,
             health: 40,
-            moveSpeed: 250,
+            moveSpeed: 400,
             movePattern: 'wander',
             pauseChance: 0.6,
             canTalk: false,
-            canTrade: false,
-            dialogues: []
-        };
+            canTrade: false
+        });
 
-        const components = BaseNeutral.getBaseComponents(config);
-        const entity = entityManager.createEntity(components, ['neutral', 'wildlife', 'deer']);
-        
-        return entity;
+        return entityManager.createEntity(components, ['neutral', 'wildlife', 'enemy']);
     }
 }
 
 export class Wolf {
     static create(entityManager, position) {
-        const config = {
+        const components = BaseNeutral.getBaseComponents({
             position,
             name: 'Wolf',
             color: 0x696969,
-            faction: 'wildlife',
             health: 60,
             moveSpeed: 300,
             movePattern: 'patrol',
             pauseChance: 0.4,
             canTalk: false,
-            canTrade: false,
-            dialogues: []
-        };
+            canTrade: false
+        });
 
-        const components = BaseNeutral.getBaseComponents(config);
-        const entity = entityManager.createEntity(components, ['neutral', 'wildlife', 'wolf']);
-        
-        return entity;
+        return entityManager.createEntity(components, ['neutral', 'wildlife', 'enemy']);
     }
 }
 
-// Merchant NPCs
+// NPC neutrals
 export class Merchant {
     static create(entityManager, position) {
-        const config = {
+        const components = BaseNeutral.getBaseComponents({
             position,
             name: 'Merchant',
             color: 0xffd700,
-            faction: 'merchants',
-            health: 80,
+            health: 100,
             moveSpeed: 500,
             movePattern: 'stationary',
-            pauseChance: 1.0,
+            pauseChance: 1.0,  // Never moves
             canTalk: true,
             canTrade: true,
             dialogues: [
-                "Welcome! Take a look at my wares!",
-                "Best prices in the land, I guarantee!",
-                "Protein shakes for the aspiring arm wrestler!",
+                "Welcome to my shop!",
+                "Best prices in the kingdom!",
+                "Protein shakes for strong arms!",
                 "Come back anytime!"
             ]
-        };
+        });
 
-        const components = BaseNeutral.getBaseComponents(config);
-        const entity = entityManager.createEntity(components, ['neutral', 'merchant', 'npc']);
-        
-        return entity;
+        return entityManager.createEntity(components, ['neutral', 'npc', 'merchant', 'enemy']);
     }
 }
 
-// Guard NPCs
 export class TownGuard {
     static create(entityManager, position) {
-        const config = {
+        const components = BaseNeutral.getBaseComponents({
             position,
             name: 'Town Guard',
             color: 0x4682b4,
-            faction: 'guards',
             health: 150,
-            moveSpeed: 350,
+            moveSpeed: 600,
             movePattern: 'patrol',
             pauseChance: 0.5,
             canTalk: true,
@@ -121,18 +101,14 @@ export class TownGuard {
                 "Keep the peace, citizen.",
                 "No trouble in my town.",
                 "Move along.",
-                "Report any bandits to me immediately."
+                "Report any bandits immediately."
             ]
-        };
+        });
 
-        const components = BaseNeutral.getBaseComponents(config);
-        const entity = entityManager.createEntity(components, ['neutral', 'guard', 'npc']);
-        
-        return entity;
+        return entityManager.createEntity(components, ['neutral', 'npc', 'guard', 'enemy']);
     }
 }
 
-// Villager NPCs
 export class Villager {
     static create(entityManager, position) {
         const dialogueSets = [
@@ -159,50 +135,47 @@ export class Villager {
         const dialogues = dialogueSets[Math.floor(Math.random() * dialogueSets.length)];
         const names = ['Villager', 'Townsperson', 'Local', 'Resident'];
         
-        const config = {
+        const components = BaseNeutral.getBaseComponents({
             position,
             name: names[Math.floor(Math.random() * names.length)],
             color: 0x8fbc8f,
-            faction: 'merchants',
             health: 50,
-            moveSpeed: 600,
+            moveSpeed: 500,
             movePattern: 'wander',
             pauseChance: 0.8,
             canTalk: true,
             canTrade: false,
             dialogues: dialogues
-        };
+        });
 
-        const components = BaseNeutral.getBaseComponents(config);
-        const entity = entityManager.createEntity(components, ['neutral', 'villager', 'npc']);
-        
-        return entity;
+        return entityManager.createEntity(components, ['neutral', 'npc', 'villager', 'enemy']);
     }
 }
 
-// Export all neutral types
-export const NeutralTypes = {
-    // Wildlife
-    Rabbit,
-    Deer,
-    Wolf,
-    
-    // NPCs
-    Merchant,
-    TownGuard,
-    Villager
-};
-
-// Neutral factory
+// Factory class
 export class NeutralFactory {
     static create(entityManager, type, position) {
-        const NeutralClass = NeutralTypes[type];
-        if (!NeutralClass) {
-            console.error(`Unknown neutral type: ${type}`);
-            return null;
+        switch (type) {
+            // Wildlife
+            case 'Rabbit':
+                return Rabbit.create(entityManager, position);
+            case 'Deer':
+                return Deer.create(entityManager, position);
+            case 'Wolf':
+                return Wolf.create(entityManager, position);
+            
+            // NPCs
+            case 'Merchant':
+                return Merchant.create(entityManager, position);
+            case 'TownGuard':
+                return TownGuard.create(entityManager, position);
+            case 'Villager':
+                return Villager.create(entityManager, position);
+            
+            default:
+                console.error(`Unknown neutral type: ${type}`);
+                return null;
         }
-        
-        return NeutralClass.create(entityManager, position);
     }
 
     static getRandomWildlife() {
@@ -215,7 +188,3 @@ export class NeutralFactory {
         return npcs[Math.floor(Math.random() * npcs.length)];
     }
 }
-
-// Keep the old NeutralMob export for compatibility
-export { default as NeutralMob } from './BaseNeutral.js';
-export default BaseNeutral;

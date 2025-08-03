@@ -143,8 +143,57 @@ export default class GameSceneRefactored extends Phaser.Scene {
         // Create some initial NPCs near spawn
         this.createInitialNPCs();
         
+        
         // Create test enemy for combat debugging
         // this.createTestEnemy(); // Commented out - was spawning enemy in safe zone
+    }
+
+    createInitialNPCs() {
+        // Create a merchant near spawn
+        const merchant = NeutralFactory.create(
+            this.systems.entityManager,
+            'Merchant',
+            { x: 3, y: 0 }
+        );
+        this.createEntityVisual(merchant);
+        
+        // Create a town guard
+        const guard = NeutralFactory.create(
+            this.systems.entityManager,
+            'TownGuard',
+            { x: -2, y: -2 }
+        );
+        this.createEntityVisual(guard);
+        
+        // Create some villagers
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
+            const x = Math.round(Math.cos(angle) * 8);
+            const y = Math.round(Math.sin(angle) * 8);
+            
+            const villager = NeutralFactory.create(
+                this.systems.entityManager,
+                'Villager',
+                { x, y }
+            );
+            this.createEntityVisual(villager);
+        }
+        
+        // Create some wildlife
+        for (let i = 0; i < 5; i++) {
+            const x = Math.floor(Math.random() * 20 - 10);
+            const y = Math.floor(Math.random() * 20 - 10);
+            
+            // Don't spawn in safe zone
+            if (Math.abs(x) < 5 && Math.abs(y) < 5) continue;
+            
+            const wildlife = NeutralFactory.create(
+                this.systems.entityManager,
+                NeutralFactory.getRandomWildlife(),
+                { x, y }
+            );
+            this.createEntityVisual(wildlife);
+        }
     }
 
     createBonfireVisual(x, y) {
@@ -346,53 +395,6 @@ export default class GameSceneRefactored extends Phaser.Scene {
         }
     }
 
-    createInitialNPCs() {
-        // Create a merchant near spawn
-        const merchant = NeutralFactory.create(
-            this.systems.entityManager,
-            'Merchant',
-            { x: 3, y: 0 }
-        );
-        this.createEntityVisual(merchant);
-        
-        // Create a town guard
-        const guard = NeutralFactory.create(
-            this.systems.entityManager,
-            'TownGuard',
-            { x: -2, y: -2 }
-        );
-        this.createEntityVisual(guard);
-        
-        // Create some villagers
-        for (let i = 0; i < 3; i++) {
-            const angle = (i / 3) * Math.PI * 2;
-            const x = Math.round(Math.cos(angle) * 8);
-            const y = Math.round(Math.sin(angle) * 8);
-            
-            const villager = NeutralFactory.create(
-                this.systems.entityManager,
-                'Villager',
-                { x, y }
-            );
-            this.createEntityVisual(villager);
-        }
-        
-        // Create some wildlife
-        for (let i = 0; i < 5; i++) {
-            const x = Math.floor(Math.random() * 20 - 10);
-            const y = Math.floor(Math.random() * 20 - 10);
-            
-            // Don't spawn in safe zone
-            if (Math.abs(x) < 5 && Math.abs(y) < 5) continue;
-            
-            const wildlife = NeutralFactory.create(
-                this.systems.entityManager,
-                NeutralFactory.getRandomWildlife(),
-                { x, y }
-            );
-            this.createEntityVisual(wildlife);
-        }
-    }
 
     createEntityVisual(entity) {
         let visual;
@@ -704,6 +706,17 @@ export default class GameSceneRefactored extends Phaser.Scene {
         }
     }
 
+
+    handleShopOpen(data) {
+        // This would open shop UI
+        console.log('Shop opened:', data);
+    }
+
+    handleDialogueShow(data) {
+        // This would show dialogue UI
+        console.log('Dialogue:', data.text);
+    }
+
     handleNeutralClicked(data) {
         const { entityId, canTalk, canTrade } = data;
         
@@ -716,16 +729,6 @@ export default class GameSceneRefactored extends Phaser.Scene {
                 canTrade: canTrade
             });
         }
-    }
-
-    handleShopOpen(data) {
-        // This would open shop UI
-        console.log('Shop opened:', data);
-    }
-
-    handleDialogueShow(data) {
-        // This would show dialogue UI
-        console.log('Dialogue:', data.text);
     }
 
     showFloatingText(text, position) {
@@ -905,7 +908,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
             if (!entity) return;
             
             // Update based on entity type
-            if (entity.hasTag('enemy')) {
+            if (entity.hasTag('enemy') && !entity.hasTag('neutral')) {
                 BaseEnemy.updateVisuals(visual, entity);
             } else if (entity.hasTag('neutral')) {
                 BaseNeutral.updateVisuals(visual, entity);
