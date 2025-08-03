@@ -67,25 +67,12 @@ export default class CombatSystem {
             return;
         }
         
-        // Get defender level to determine combat duration
-        const defenderData = defender.getComponent('enemyData');
-        const defenderLevel = defenderData?.tier || 1;
-        
-        // Combat duration based on enemy level (shorter, more intense)
-        // Level 1: 3 seconds
-        // Level 2: 4 seconds  
-        // Level 3: 5 seconds
-        // Level 4: 6 seconds
-        const combatDuration = 2000 + (defenderLevel * 1000); // 2 + level seconds
-        
         // Initialize combat data
         const combatData = {
             attackerId,
             defenderId,
             startTime: Date.now(),
-            endTime: Date.now() + combatDuration,
-            combatDuration,
-            tugPosition: 1.0, // Start at full (player winning)
+            tugPosition: 0.8, // Start at 80% (player advantage but not full)
             drainRate: 0.1, // Base drain rate - will be adjusted by enemy level
             attackerDPS: 0,
             defenderDPS: 0,
@@ -264,14 +251,13 @@ export default class CombatSystem {
         if (combatData.state !== 'active') return;
         
         let result = null;
-        const now = Date.now();
         
         // Check defeat condition - bar reached 0
         if (combatData.tugPosition <= 0) {
             result = 'defeat';
         }
-        // Check victory condition - survived the duration
-        else if (now >= combatData.endTime) {
+        // Check victory condition - pushed bar to 100%
+        else if (combatData.tugPosition >= 1.0) {
             result = 'victory';
         }
         

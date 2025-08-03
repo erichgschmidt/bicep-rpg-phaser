@@ -111,11 +111,11 @@ export default class CombatUI {
         const centerLine = this.scene.add.rectangle(0, 0, 4, this.config.tugBarHeight + 10, 0xffffff);
         this.container.add(centerLine);
         
-        // Tug bar (starts at full/right)
+        // Tug bar (starts at 80%)
         this.tugBar = this.scene.add.rectangle(
-            this.config.tugBarWidth * 0.25,  // Start at right position
+            this.config.tugBarWidth * 0.15,  // Start at 80% position
             0, 
-            this.config.tugBarWidth * 0.5,   // Full width
+            this.config.tugBarWidth * 0.3,   // 80% width
             this.config.tugBarHeight - 4, 
             0x00ff00
         );
@@ -150,14 +150,6 @@ export default class CombatUI {
         });
         this.container.add(this.clickCountText);
         
-        // Timer display
-        this.timerText = this.scene.add.text(0, -100, 'Time: 0s', {
-            fontSize: '20px',
-            color: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0.5, 0);
-        this.container.add(this.timerText);
         
         // Click counter display
         this.dpsText = this.scene.add.text(200, -100, 'Clicks: 0', {
@@ -298,13 +290,6 @@ export default class CombatUI {
         // Update click count if we have combat data
         if (this.currentCombat && this.dpsText) {
             this.dpsText.setText(`Clicks: ${this.clickCount}`);
-        }
-        
-        // Update timer if we have combat data
-        if (this.currentCombat && this.timerText && data.combatData) {
-            const now = Date.now();
-            const timeLeft = Math.max(0, (data.combatData.endTime - now) / 1000);
-            this.timerText.setText(`Survive: ${timeLeft.toFixed(1)}s`);
         }
     }
 
