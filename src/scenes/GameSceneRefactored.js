@@ -571,8 +571,6 @@ export default class GameSceneRefactored extends Phaser.Scene {
 
     setupEventListeners() {
         // Entity visual updates
-        this.eventBus.on('entity:moved', this.handleEntityMoved.bind(this));
-        this.eventBus.on('entity:move-free', this.handleEntityMoveFree.bind(this));
         this.eventBus.on('entity:destroyed', this.handleEntityDestroyed.bind(this));
         this.eventBus.on('entity:created', this.handleEntityCreated.bind(this));
         
@@ -600,160 +598,8 @@ export default class GameSceneRefactored extends Phaser.Scene {
         });
     }
 
-    handleEntityMoved(data) {
-        const { entityId, oldPosition, newPosition } = data;
-        const visual = this.entityVisuals.get(entityId);
-        
-        if (!visual) return;
-        
-        const entity = this.systems.entityManager.getEntity(entityId);
-        if (!entity) return;
-        
-        // Get movement style for varied animation
-        const movementConfig = this.getMovementConfig(entity);
-        
-        // Add subtle anticipation for more organic feel
-        if (movementConfig.anticipation > 0) {
-            const anticipationX = oldPosition.x * this.config.gridSize + (Math.random() - 0.5) * 4;
-            const anticipationY = oldPosition.y * this.config.gridSize + (Math.random() - 0.5) * 4;
-            
-            this.tweens.add({
-                targets: visual,
-                x: anticipationX,
-                y: anticipationY,
-                duration: movementConfig.anticipation,
-                ease: 'Quad.easeOut',
-                onComplete: () => {
-                    // Main movement tween
-                    this.performMainMovement(visual, newPosition, entityId, movementConfig);
-                }
-            });
-        } else {
-            // Direct movement
-            this.performMainMovement(visual, newPosition, entityId, movementConfig);
-        }
-    }
-
-    getMovementConfig(entity) {
-        // Different movement styles based on entity type
-        if (entity.hasTag('player')) {
-            return {
-                duration: 280 + Math.random() * 80, // 280-360ms
-                ease: 'Quad.easeInOut',
-                anticipation: 0,
-                overshoot: 0
-            };
-        } else if (entity.hasTag('enemy')) {
-            const enemyData = entity.getComponent('enemyData');
-            const baseSpeed = enemyData?.moveSpeed || 1;
-            
-            return {
-                duration: (400 - baseSpeed * 50) + Math.random() * 150, // Variable based on enemy type
-                ease: Math.random() < 0.3 ? 'Back.easeOut' : 'Cubic.easeInOut',
-                anticipation: Math.random() < 0.2 ? 30 + Math.random() * 40 : 0,
-                overshoot: Math.random() < 0.1 ? 2 : 0
-            };
-        } else if (entity.hasTag('neutral')) {
-            return {
-                duration: 450 + Math.random() * 200, // Slower, more leisurely
-                ease: Math.random() < 0.4 ? 'Sine.easeInOut' : 'Quad.easeInOut',
-                anticipation: Math.random() < 0.3 ? 40 + Math.random() * 60 : 0,
-                overshoot: 0
-            };
-        }
-        
-        // Default
-        return {
-            duration: 320,
-            ease: 'Cubic.easeInOut',
-            anticipation: 0,
-            overshoot: 0
-        };
-    }
-
-    performMainMovement(visual, newPosition, entityId, config) {
-        const targetX = newPosition.x * this.config.gridSize;
-        const targetY = newPosition.y * this.config.gridSize;
-        
-        this.tweens.add({
-            targets: visual,
-            x: targetX + config.overshoot,
-            y: targetY + config.overshoot,
-            duration: config.duration,
-            ease: config.ease,
-            onComplete: () => {
-                // Settle back if there was overshoot
-                if (config.overshoot > 0) {
-                    this.tweens.add({
-                        targets: visual,
-                        x: targetX,
-                        y: targetY,
-                        duration: 80,
-                        ease: 'Quad.easeOut'
-                    });
-                }
-                
-                // Clear moving flag with varied delay
-                const entity = this.systems.entityManager.getEntity(entityId);
-                if (entity) {
-                    const position = entity.getComponent('position');
-                    if (position) {
-                        const delay = 30 + Math.random() * 40; // 30-70ms variance
-                        setTimeout(() => {
-                            position.moving = false;
-                        }, delay);
-                    }
-                }
-                
-                // Update chunks if needed
-                if (entityId === this.playerId) {
-                    this.updateVisibleChunks();
-                }
-            }
-        });
-    }
-
-    handleEntityMoveFree(data) {
-        const { entityId, targetX, targetY, duration } = data;
-        const visual = this.entityVisuals.get(entityId);
-        
-        if (!visual) return;
-        
-        const entity = this.systems.entityManager.getEntity(entityId);
-        if (!entity) return;
-        
-        // Update position to current visual position BEFORE starting tween
-        const position = entity.getComponent('position');
-        if (position) {
-            position.x = visual.x;
-            position.y = visual.y;
-            position.pixelX = visual.x;
-            position.pixelY = visual.y;
-            position.worldX = Math.floor(visual.x / this.config.gridSize);
-            position.worldY = Math.floor(visual.y / this.config.gridSize);
-        }
-        
-        // Smooth tween to target position
-        this.tweens.add({
-            targets: visual,
-            x: targetX,
-            y: targetY,
-            duration: duration || 500,
-            ease: 'Sine.easeInOut',
-            onUpdate: () => {
-                // Keep position in sync during movement
-                if (position) {
-                    position.x = visual.x;
-                    position.y = visual.y;
-                    position.pixelX = visual.x;
-                    position.pixelY = visual.y;
-                    position.worldX = Math.floor(visual.x / this.config.gridSize);
-                    position.worldY = Math.floor(visual.y / this.config.gridSize);
-                }
-            }
-        });
-    }
-
+    // Movement is now handled by MovementManager
+    
     handleEntityDestroyed(data) {
         const { entityId } = data;
         const visual = this.entityVisuals.get(entityId);
@@ -1046,7 +892,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
         this.systems.combatSystem.update(delta);
         this.systems.timeSystem.update(delta);
         this.systems.zoneManager.update(delta);
-        this.systems.aiMovementSystem.update(delta);
+        this.systems.movementManager.update(delta);
         
         // Update UI
         if (this.combatUI) this.combatUI.update(time, delta);

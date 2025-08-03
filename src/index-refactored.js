@@ -19,7 +19,7 @@ import RelationshipSystem from './systems/RelationshipSystem.js';
 import PartySystem from './systems/PartySystem.js';
 import PetSystem from './systems/PetSystem.js';
 import DebugSystem from './systems/DebugSystem.js';
-import AIMovementSystem from './systems/AIMovementSystem.js';
+import MovementManager from './systems/MovementManager.js';
 
 // Initialize core systems (TRUNK)
 const eventBus = new EventBus();
@@ -38,7 +38,7 @@ const relationshipSystem = new RelationshipSystem(eventBus, entityManager);
 const partySystem = new PartySystem(eventBus, entityManager);
 const petSystem = new PetSystem(eventBus, entityManager);
 const debugSystem = new DebugSystem(eventBus, entityManager);
-const aiMovementSystem = new AIMovementSystem(eventBus, entityManager);
+const movementManager = new MovementManager(eventBus, entityManager);
 
 // Make systems globally accessible (temporary - will use DI later)
 window.gameCore = {
@@ -60,7 +60,7 @@ window.gameCore = {
     partySystem,
     petSystem,
     debugSystem,
-    aiMovementSystem
+    movementManager
 };
 
 // Register game states
@@ -92,54 +92,7 @@ inputController.registerContext('gameplay', {
     'mouse0': 'player:click-attack'
 });
 
-// Listen for player movement validation
-eventBus.on('entity:request-move', (data) => {
-    const { entityId, oldPosition, newPosition } = data;
-    
-    // Check if move is valid (no collision, etc)
-    let blocked = false;
-    
-    // Check for entity collisions
-    const entities = entityManager.getEntitiesWithComponents(['position']);
-    for (const entity of entities) {
-        if (entity.id === entityId) continue;
-        
-        const pos = entity.getComponent('position');
-        if (pos.x === newPosition.x && pos.y === newPosition.y) {
-            blocked = true;
-            break;
-        }
-    }
-    
-    if (!blocked) {
-        // Move is valid
-        const entity = entityManager.getEntity(entityId);
-        if (entity) {
-            const position = entity.getComponent('position');
-            if (position) {
-                const oldPos = { x: position.x, y: position.y };
-                position.moving = true; // Set moving flag to prevent rapid movement
-                position.x = newPosition.x;
-                position.y = newPosition.y;
-                position.worldX = newPosition.x;
-                position.worldY = newPosition.y;
-                position.pixelX = newPosition.x * 32;
-                position.pixelY = newPosition.y * 32;
-                
-                // Check for combat encounters if this is a player
-                if (entity.hasTag('player')) {
-                    checkForCombatEncounters(entityManager, eventBus, entityId, newPosition);
-                }
-                
-                eventBus.emit('entity:moved', {
-                    entityId,
-                    oldPosition: oldPos,
-                    newPosition
-                });
-            }
-        }
-    }
-});
+// Movement is now handled by MovementManager
 
 // Function to check for combat encounters on movement
 function checkForCombatEncounters(entityManager, eventBus, playerId, playerPosition) {
