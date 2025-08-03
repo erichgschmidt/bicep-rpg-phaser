@@ -111,8 +111,14 @@ export default class CombatUI {
         const centerLine = this.scene.add.rectangle(0, 0, 4, this.config.tugBarHeight + 10, 0xffffff);
         this.container.add(centerLine);
         
-        // Tug bar (starts at center)
-        this.tugBar = this.scene.add.rectangle(0, 0, this.config.tugBarWidth * 0.5, this.config.tugBarHeight - 4, 0x00ff00);
+        // Tug bar (starts at full/right)
+        this.tugBar = this.scene.add.rectangle(
+            this.config.tugBarWidth * 0.25,  // Start at right position
+            0, 
+            this.config.tugBarWidth * 0.5,   // Full width
+            this.config.tugBarHeight - 4, 
+            0x00ff00
+        );
         this.container.add(this.tugBar);
         
         // Click button
@@ -266,6 +272,18 @@ export default class CombatUI {
             this.tugBar.setSize(Math.abs(barX) * 2, this.config.tugBarHeight - 4);
         }
         
+        // Add pulse effect when bar increases
+        if (tugPosition > (this.lastTugPosition || 0.5)) {
+            this.scene.tweens.add({
+                targets: this.tugBar,
+                scaleY: 1.2,
+                duration: 100,
+                yoyo: true,
+                ease: 'Quad.easeOut'
+            });
+        }
+        this.lastTugPosition = tugPosition;
+        
         // Change color based on position
         if (tugPosition > 0.75) {
             this.tugBar.setFillStyle(0x00ff00); // Green - winning
@@ -294,14 +312,30 @@ export default class CombatUI {
         if (!this.container) return;
         
         // Victory text
-        const victoryText = this.scene.add.text(0, 0, 'VICTORY!', {
+        const victoryText = this.scene.add.text(0, -30, 'VICTORY!', {
             fontSize: '64px',
             color: '#00ff00',
             stroke: '#ffffff',
             strokeThickness: 6
         }).setOrigin(0.5);
         
-        this.container.add(victoryText);
+        // Show click stats
+        const statsText = this.scene.add.text(0, 30, `${this.clickCount} clicks!`, {
+            fontSize: '32px',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+        
+        // Show rewards (placeholder)
+        const rewardText = this.scene.add.text(0, 70, '+10 XP +5 Gold', {
+            fontSize: '24px',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+        
+        this.container.add([victoryText, statsText, rewardText]);
         
         // Animate
         victoryText.setScale(0);

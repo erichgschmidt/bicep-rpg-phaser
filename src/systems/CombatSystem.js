@@ -71,12 +71,12 @@ export default class CombatSystem {
         const defenderData = defender.getComponent('enemyData');
         const defenderLevel = defenderData?.tier || 1;
         
-        // Combat duration based on enemy level
-        // Level 1: 5 seconds
-        // Level 2: 8 seconds  
-        // Level 3: 12 seconds
-        // Level 4: 15 seconds
-        const combatDuration = 3000 + (defenderLevel * 3000); // 3 + (3 * level) seconds
+        // Combat duration based on enemy level (shorter, more intense)
+        // Level 1: 3 seconds
+        // Level 2: 4 seconds  
+        // Level 3: 5 seconds
+        // Level 4: 6 seconds
+        const combatDuration = 2000 + (defenderLevel * 1000); // 2 + level seconds
         
         // Initialize combat data
         const combatData = {
@@ -159,9 +159,15 @@ export default class CombatSystem {
         combatData.lastAttackerClick = now;
         combatData.clickCount++;
         
-        // Each click pushes the bar up a small amount
-        const pushAmount = 0.02 + (clickPower * 0.005); // Much smaller push per click
+        // Each click pushes the bar up more noticeably
+        const pushAmount = 0.08 + (clickPower * 0.01); // Bigger push so player can see impact
         combatData.tugPosition = Math.min(1, combatData.tugPosition + pushAmount);
+        
+        // Visual feedback - emit immediate update
+        this.eventBus.emit('combat:tug-update', {
+            combatData,
+            tugPosition: combatData.tugPosition
+        });
         
         // Emit click event
         this.eventBus.emit('combat:player-click', {
@@ -222,10 +228,11 @@ export default class CombatSystem {
             const enemyLevel = enemyData?.tier || 1;
             
             // Higher level enemies drain MUCH faster, requiring more clicks
-            // Level 1: ~5-10 clicks/sec needed
-            // Level 2: ~10-15 clicks/sec needed  
-            // Level 3: ~15-20 clicks/sec needed
-            combatData.drainRate = 0.05 + (enemyLevel * 0.05) + (enemyPower * 0.01);
+            // Level 1: ~3-5 clicks/sec needed
+            // Level 2: ~5-8 clicks/sec needed  
+            // Level 3: ~8-12 clicks/sec needed
+            // Level 4: ~12-15 clicks/sec needed
+            combatData.drainRate = 0.15 + (enemyLevel * 0.08) + (enemyPower * 0.02);
         }
     }
 
