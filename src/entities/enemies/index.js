@@ -15,6 +15,7 @@ export class Pebble {
             moveSpeed: 300,
             movePattern: 'erratic',
             pauseChance: 0.3,
+            tier: 1,  // Level 1 enemy - easiest
             lootTable: [
                 { itemId: 'small_protein', chance: 0.3, min: 1, max: 2 },
                 { itemId: 'pebble_dust', chance: 0.5, min: 1, max: 3 }
@@ -39,6 +40,7 @@ export class Stick {
             moveSpeed: 220,
             movePattern: 'patrol',
             pauseChance: 0.4,
+            tier: 2,  // Level 2 enemy - medium
             lootTable: [
                 { itemId: 'protein_bar', chance: 0.4, min: 1, max: 2 },
                 { itemId: 'wooden_bracelet', chance: 0.1, min: 1, max: 1 },
@@ -64,6 +66,7 @@ export class Rock {
             moveSpeed: 400,
             movePattern: 'lazy',
             pauseChance: 0.7,
+            tier: 3,  // Level 3 enemy - hard
             lootTable: [
                 { itemId: 'protein_shake', chance: 0.5, min: 1, max: 3 },
                 { itemId: 'stone_gloves', chance: 0.15, min: 1, max: 1 },
@@ -89,6 +92,7 @@ export class AngrySquirrel {
             moveSpeed: 150,
             movePattern: 'aggressive',
             pauseChance: 0.1,
+            tier: 4,  // Level 4 enemy - boss tier
             lootTable: [
                 { itemId: 'rage_protein', chance: 0.6, min: 1, max: 2 },
                 { itemId: 'squirrel_gloves', chance: 0.2, min: 1, max: 1 },

@@ -67,13 +67,26 @@ export default class CombatSystem {
             return;
         }
         
+        // Get defender level to determine combat duration
+        const defenderData = defender.getComponent('enemyData');
+        const defenderLevel = defenderData?.tier || 1;
+        
+        // Combat duration based on enemy level
+        // Level 1: 5 seconds
+        // Level 2: 8 seconds  
+        // Level 3: 12 seconds
+        // Level 4: 15 seconds
+        const combatDuration = 3000 + (defenderLevel * 3000); // 3 + (3 * level) seconds
+        
         // Initialize combat data
         const combatData = {
             attackerId,
             defenderId,
             startTime: Date.now(),
+            endTime: Date.now() + combatDuration,
+            combatDuration,
             tugPosition: 1.0, // Start at full (player winning)
-            drainRate: 0.15, // How fast the bar drains per second
+            drainRate: 0.1, // Base drain rate - will be adjusted by enemy level
             attackerDPS: 0,
             defenderDPS: 0,
             lastAttackerClick: 0,
@@ -146,8 +159,8 @@ export default class CombatSystem {
         combatData.lastAttackerClick = now;
         combatData.clickCount++;
         
-        // Each click pushes the bar up
-        const pushAmount = 0.05 + (clickPower * 0.02); // Base push + power bonus
+        // Each click pushes the bar up a small amount
+        const pushAmount = 0.02 + (clickPower * 0.005); // Much smaller push per click
         combatData.tugPosition = Math.min(1, combatData.tugPosition + pushAmount);
         
         // Emit click event
@@ -200,12 +213,19 @@ export default class CombatSystem {
         if (now - combatData.lastDefenderClick >= this.config.enemyClickInterval) {
             combatData.lastDefenderClick = now;
             
-            // Get enemy power and adjust drain rate
+            // Get enemy power and level
             const powerComponent = defender.getComponent('power');
             const enemyPower = powerComponent ? powerComponent.value : 1;
             
-            // Higher power enemies make the bar drain faster
-            combatData.drainRate = 0.1 + (enemyPower * 0.02);
+            // Get enemy level from enemyData
+            const enemyData = defender.getComponent('enemyData');
+            const enemyLevel = enemyData?.tier || 1;
+            
+            // Higher level enemies drain MUCH faster, requiring more clicks
+            // Level 1: ~5-10 clicks/sec needed
+            // Level 2: ~10-15 clicks/sec needed  
+            // Level 3: ~15-20 clicks/sec needed
+            combatData.drainRate = 0.05 + (enemyLevel * 0.05) + (enemyPower * 0.01);
         }
     }
 
@@ -237,14 +257,15 @@ export default class CombatSystem {
         if (combatData.state !== 'active') return;
         
         let result = null;
+        const now = Date.now();
         
-        // Check victory condition
-        if (combatData.tugPosition >= this.config.tugThreshold) {
-            result = 'victory';
-        }
-        // Check defeat condition
-        else if (combatData.tugPosition <= this.config.defeatThreshold) {
+        // Check defeat condition - bar reached 0
+        if (combatData.tugPosition <= 0) {
             result = 'defeat';
+        }
+        // Check victory condition - survived the duration
+        else if (now >= combatData.endTime) {
+            result = 'victory';
         }
         
         if (result) {

@@ -144,8 +144,17 @@ export default class CombatUI {
         });
         this.container.add(this.clickCountText);
         
-        // DPS display
-        this.dpsText = this.scene.add.text(200, -100, 'DPS: 0', {
+        // Timer display
+        this.timerText = this.scene.add.text(0, -100, 'Time: 0s', {
+            fontSize: '20px',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5, 0);
+        this.container.add(this.timerText);
+        
+        // Click counter display
+        this.dpsText = this.scene.add.text(200, -100, 'Clicks: 0', {
             fontSize: '16px',
             color: '#00ff00'
         }).setOrigin(1, 0);
@@ -271,6 +280,13 @@ export default class CombatUI {
         // Update click count if we have combat data
         if (this.currentCombat && this.dpsText) {
             this.dpsText.setText(`Clicks: ${this.clickCount}`);
+        }
+        
+        // Update timer if we have combat data
+        if (this.currentCombat && this.timerText && data.combatData) {
+            const now = Date.now();
+            const timeLeft = Math.max(0, (data.combatData.endTime - now) / 1000);
+            this.timerText.setText(`Survive: ${timeLeft.toFixed(1)}s`);
         }
     }
 

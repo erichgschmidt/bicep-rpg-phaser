@@ -101,8 +101,10 @@ export default class BaseEnemy {
         const arm = scene.add.rectangle(-25, 0, appearance.armLength, appearance.armWidth, appearance.armColor);
         arm.setOrigin(1, 0.5);
 
-        // Enemy name
-        const nameText = scene.add.text(0, -25, appearance.name, {
+        // Enemy name with level
+        const enemyData = enemyEntity.getComponent('enemyData');
+        const displayName = `${appearance.name} (Lv${enemyData?.tier || 1})`;
+        const nameText = scene.add.text(0, -25, displayName, {
             fontSize: '12px',
             color: '#ffffff',
             stroke: '#000000',
