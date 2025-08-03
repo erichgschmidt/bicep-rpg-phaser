@@ -35,6 +35,10 @@ export default class CombatSystem {
         // Combat initiation
         this.eventBus.on('combat:start', this.startCombat.bind(this));
         this.eventBus.on('combat:flee', this.fleeCombat.bind(this));
+        this.eventBus.on('player:flee', (data) => {
+            // Convert player:flee to combat:flee with player's entity ID
+            this.fleeCombat({ entityId: data.attackerId });
+        });
         
         // Entity events
         this.eventBus.on('entity:destroyed', (data) => {

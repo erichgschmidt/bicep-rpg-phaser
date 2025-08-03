@@ -37,6 +37,27 @@ export default class CombatUI {
         this.eventBus.on('combat:ended', this.hideCombat.bind(this));
         this.eventBus.on('combat:victory', this.showVictory.bind(this));
         this.eventBus.on('combat:defeat', this.showDefeat.bind(this));
+        
+        // Global click handler for combat
+        this.scene.input.on('pointerdown', (pointer) => {
+            if (this.isVisible && this.currentCombat && pointer.button === 0) {
+                this.handleClick();
+            }
+        });
+        
+        // Space key handler for combat
+        this.scene.input.keyboard.on('keydown-SPACE', () => {
+            if (this.isVisible && this.currentCombat) {
+                this.handleClick();
+            }
+        });
+        
+        // Escape key handler for fleeing
+        this.scene.input.keyboard.on('keydown-ESC', () => {
+            if (this.isVisible && this.currentCombat) {
+                this.handleFlee();
+            }
+        });
     }
 
     showCombat(data) {
@@ -201,6 +222,21 @@ export default class CombatUI {
             duration: 300,
             onComplete: () => clickEffect.destroy()
         });
+    }
+    
+    handleFlee() {
+        if (!this.isVisible || !this.currentCombat) return;
+        
+        console.log('CombatUI: Flee requested!');
+        
+        // Emit flee event
+        this.eventBus.emit('player:flee', {
+            attackerId: this.currentCombat.attackerId,
+            defenderId: this.currentCombat.defenderId
+        });
+        
+        // Hide combat UI
+        this.hideCombat();
     }
 
     updateTugBar(data) {

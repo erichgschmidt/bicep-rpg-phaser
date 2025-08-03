@@ -10,6 +10,7 @@ import BaseEnemy from '../entities/enemies/BaseEnemy.js';
 import BaseNeutral from '../entities/neutrals/BaseNeutral.js';
 import CombatUI from '../ui/CombatUI.js';
 import DebugUI from '../ui/DebugUI.js';
+import KeybindUI from '../ui/KeybindUI.js';
 
 export default class GameSceneRefactored extends Phaser.Scene {
     constructor() {
@@ -63,6 +64,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
         // Create UI components
         this.combatUI = new CombatUI(this, this.systems.combatSystem);
         this.debugUI = new DebugUI(this, this.systems.debugSystem);
+        this.keybindUI = new KeybindUI(this);
         
         // Create debug button
         this.createDebugButton();
@@ -316,7 +318,8 @@ export default class GameSceneRefactored extends Phaser.Scene {
             'Click Enemy: Fight',
             'Click Neutral: Interact',
             'Space/Click: Attack in Combat',
-            'ESC: Flee Combat'
+            'ESC: Flee Combat',
+            'K: Show Keybinds'
         ], {
             fontSize: '14px',
             color: '#ffffff',
@@ -551,10 +554,11 @@ export default class GameSceneRefactored extends Phaser.Scene {
                 'move_left': ['A', 'ArrowLeft'],
                 'move_right': ['D', 'ArrowRight'],
                 'interact': ['E'],
-                'attack': ['Space'],
+                'attack': ['Space', 'LeftClick'],
                 'flee': ['Escape'],
                 'inventory': ['I'],
-                'debug_menu': ['F1']
+                'debug_menu': ['F1'],
+                'show_keybinds': ['K']
             }
         });
         
@@ -568,6 +572,11 @@ export default class GameSceneRefactored extends Phaser.Scene {
                 y: pointer.worldY,
                 button: pointer.button
             });
+            
+            // Also emit attack event if in combat and left click
+            if (pointer.button === 0) { // Left click
+                this.eventBus.emit('player:attack');
+            }
         });
     }
 
@@ -901,6 +910,7 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         // Update UI
         if (this.combatUI) this.combatUI.update(time, delta);
+        if (this.keybindUI) this.keybindUI.update?.(time, delta);
         
         // Update entity visuals
         this.entityVisuals.forEach((visual, entityId) => {
