@@ -438,7 +438,8 @@ export default class GameSceneRefactored extends Phaser.Scene {
         const playerPos = player.getComponent('position');
         if (!playerPos) return;
         
-        const playerChunk = this.getChunkCoords(playerPos.x, playerPos.y);
+        // Use pixel coordinates for chunk calculation since we're using free movement
+        const playerChunk = this.getChunkCoords(playerPos.pixelX, playerPos.pixelY);
         
         // Generate chunks around player
         for (let dx = -this.config.viewDistance; dx <= this.config.viewDistance; dx++) {
@@ -449,8 +450,8 @@ export default class GameSceneRefactored extends Phaser.Scene {
             }
         }
         
-        // Clean up distant chunks
-        this.cleanupDistantChunks(playerChunk);
+        // Clean up distant chunks - DISABLED to keep all entities visible
+        // this.cleanupDistantChunks(playerChunk);
     }
 
     generateChunk(chunkX, chunkY) {
@@ -468,16 +469,23 @@ export default class GameSceneRefactored extends Phaser.Scene {
         const rng = this.createSeededRandom(seed);
         
         // Check if chunk should have special features
-        const startX = chunkX * this.config.chunkSize;
-        const startY = chunkY * this.config.chunkSize;
+        // Convert chunk coordinates to world grid coordinates
+        const chunkSizeInPixels = this.config.chunkSize * this.config.gridSize;
+        const startPixelX = chunkX * chunkSizeInPixels;
+        const startPixelY = chunkY * chunkSizeInPixels;
         
         // Generate enemies (but not in safe zones)
         const enemyCount = Math.floor(rng() * 3) + 2;
         for (let i = 0; i < enemyCount; i++) {
-            const localX = Math.floor(rng() * this.config.chunkSize);
-            const localY = Math.floor(rng() * this.config.chunkSize);
-            const worldX = startX + localX;
-            const worldY = startY + localY;
+            // Generate random position within chunk (in pixels)
+            const localPixelX = Math.floor(rng() * chunkSizeInPixels);
+            const localPixelY = Math.floor(rng() * chunkSizeInPixels);
+            const worldPixelX = startPixelX + localPixelX;
+            const worldPixelY = startPixelY + localPixelY;
+            
+            // Convert to grid coordinates for spawn position
+            const worldX = Math.floor(worldPixelX / this.config.gridSize);
+            const worldY = Math.floor(worldPixelY / this.config.gridSize);
             
             // Check if position is in safe zone
             if (this.systems.zoneManager.canSpawnEnemyAt({ x: worldX, y: worldY })) {
@@ -498,10 +506,15 @@ export default class GameSceneRefactored extends Phaser.Scene {
         
         // Occasionally spawn neutral mobs
         if (rng() < 0.3) {
-            const localX = Math.floor(rng() * this.config.chunkSize);
-            const localY = Math.floor(rng() * this.config.chunkSize);
-            const worldX = startX + localX;
-            const worldY = startY + localY;
+            // Generate random position within chunk (in pixels)
+            const localPixelX = Math.floor(rng() * chunkSizeInPixels);
+            const localPixelY = Math.floor(rng() * chunkSizeInPixels);
+            const worldPixelX = startPixelX + localPixelX;
+            const worldPixelY = startPixelY + localPixelY;
+            
+            // Convert to grid coordinates for spawn position
+            const worldX = Math.floor(worldPixelX / this.config.gridSize);
+            const worldY = Math.floor(worldPixelY / this.config.gridSize);
             
             const neutral = NeutralFactory.create(
                 this.systems.entityManager,
@@ -886,10 +899,13 @@ export default class GameSceneRefactored extends Phaser.Scene {
         return `${x},${y}`;
     }
 
-    getChunkCoords(worldX, worldY) {
+    getChunkCoords(pixelX, pixelY) {
+        // Convert pixel coordinates to chunk coordinates
+        // Each chunk is chunkSize * gridSize pixels
+        const chunkSizeInPixels = this.config.chunkSize * this.config.gridSize;
         return {
-            x: Math.floor(worldX / this.config.chunkSize),
-            y: Math.floor(worldY / this.config.chunkSize)
+            x: Math.floor(pixelX / chunkSizeInPixels),
+            y: Math.floor(pixelY / chunkSizeInPixels)
         };
     }
 
