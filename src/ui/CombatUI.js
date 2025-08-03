@@ -244,7 +244,7 @@ export default class CombatUI {
     }
 
     updateTugBar(data) {
-        if (!this.tugBar) return;
+        if (!this.tugBar || !this.isVisible || !this.container) return;
         
         const { tugPosition } = data;
         
@@ -253,7 +253,9 @@ export default class CombatUI {
         const barX = (tugPosition - 0.5) * this.config.tugBarWidth / 2;
         
         this.tugBar.x = barX;
-        this.tugBar.setSize(Math.abs(barX) * 2, this.config.tugBarHeight - 4);
+        if (this.tugBar.active) {
+            this.tugBar.setSize(Math.abs(barX) * 2, this.config.tugBarHeight - 4);
+        }
         
         // Change color based on position
         if (tugPosition > 0.75) {
@@ -266,10 +268,9 @@ export default class CombatUI {
             this.tugBar.setFillStyle(0xff0000); // Red - losing
         }
         
-        // Update DPS if we have combat data
-        const combatData = this.combatSystem.getCombatData(this.currentCombat.attackerId);
-        if (combatData && this.dpsText) {
-            this.dpsText.setText(`DPS: ${combatData.attackerDPS.toFixed(1)}`);
+        // Update click count if we have combat data
+        if (this.currentCombat && this.dpsText) {
+            this.dpsText.setText(`Clicks: ${this.clickCount}`);
         }
     }
 

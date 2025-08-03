@@ -1,0 +1,3016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bicep RPG v2 - Enhanced Edition</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a2e;
+            color: white;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: #16213e;
+            image-rendering: pixelated;
+        }
+        
+        #minimap {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #666;
+            border-radius: 5px;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e94560;
+        }
+        
+        #currencyDisplay {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #FFD700;
+            font-size: 18px;
+        }
+        
+        #inventoryButton {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4169E1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #inventoryButton:hover {
+            background: #5179F1;
+            transform: translateX(-50%) scale(1.05);
+        }
+        
+        #inventoryUI {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #4169E1;
+            display: none;
+            width: 800px;
+            height: 600px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .gear-slots {
+            background: rgba(30, 30, 30, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #666;
+        }
+        
+        .inventory-bag {
+            background: rgba(30, 30, 30, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #666;
+        }
+        
+        .gear-slot {
+            background: #333;
+            border: 2px solid #666;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        
+        .gear-slot:hover {
+            border-color: #4169E1;
+            transform: scale(1.02);
+        }
+        
+        .gear-slot.equipped {
+            border-color: #4ecdc4;
+            background: #2a4a4a;
+        }
+        
+        .item {
+            background: #444;
+            border: 2px solid #666;
+            padding: 8px;
+            margin: 3px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .item:hover {
+            transform: scale(1.05);
+        }
+        
+        .item.common { border-color: #888; }
+        .item.uncommon { border-color: #4ecdc4; }
+        .item.rare { border-color: #4169E1; }
+        .item.epic { border-color: #9400D3; }
+        .item.legendary { border-color: #FFD700; }
+        
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        #vendorUI {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #FFD700;
+            display: none;
+            width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .vendor-item {
+            background: #333;
+            border: 2px solid #666;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        
+        .vendor-item:hover {
+            transform: scale(1.02);
+        }
+        
+        .vendor-item.cant-afford {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .vendor-item.cant-afford:hover {
+            transform: none;
+            background: #333;
+        }
+        
+        .price {
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        #abilityBar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid #666;
+        }
+        
+        .ability {
+            width: 60px;
+            height: 60px;
+            background: #333;
+            border: 2px solid #666;
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.2s;
+        }
+        
+        .ability:hover {
+            transform: scale(1.1);
+            border-color: #e94560;
+        }
+        
+        .ability.ultimate {
+            width: 80px;
+            height: 80px;
+            border-color: #FFD700;
+            background: #442200;
+        }
+        
+        .ability.on-cooldown {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .cooldown-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 12px;
+            text-align: center;
+            padding: 2px;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .ability-key {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 10px;
+            color: #999;
+        }
+        
+        #debugPanel {
+            position: absolute;
+            top: 170px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #666;
+            font-size: 12px;
+            display: none;
+        }
+        
+        #battleUI {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #e94560;
+            display: none;
+            text-align: center;
+            min-width: 400px;
+            z-index: 999;
+        }
+        
+        #parryUI {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #FFD700;
+            display: none;
+            text-align: center;
+            min-width: 400px;
+            z-index: 999;
+        }
+        
+        .parryZone {
+            width: 300px;
+            height: 50px;
+            background: #333;
+            margin: 20px auto;
+            border: 2px solid #666;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .parryTarget {
+            position: absolute;
+            width: 60px;
+            height: 100%;
+            background: rgba(78, 205, 196, 0.5);
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .parryIndicator {
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background: #e94560;
+            left: 0;
+            transition: none;
+        }
+        
+        #weatherEffect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        
+        .tugBar {
+            width: 300px;
+            height: 30px;
+            background: #333;
+            margin: 20px auto;
+            border: 2px solid #666;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tugFill {
+            height: 100%;
+            background: linear-gradient(90deg, #e94560, #ff6b6b);
+            width: 50%;
+            transition: width 0.1s;
+        }
+        
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #ff6b6b;
+            transform: scale(1.05);
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .stat {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        #victoryText {
+            color: #4ecdc4;
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        
+        #defeatText {
+            color: #e94560;
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        
+        .debug-stat {
+            margin: 2px 0;
+            color: #4ecdc4;
+        }
+        
+        #dungeonUI {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #FFD700;
+            display: none;
+        }
+        
+        .dungeon-timer {
+            color: #e94560;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .close-button:hover {
+            background: #ff6b6b;
+        }
+        
+        .disenchant-button {
+            background: #9400D3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        
+        .disenchant-button:hover {
+            background: #a020f0;
+        }
+        
+        .auto-equip-button {
+            background: #4ecdc4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        
+        .auto-equip-button:hover {
+            background: #5eddd5;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <canvas id="minimap" width="150" height="150"></canvas>
+    
+    <div id="weatherEffect"></div>
+    
+    <div id="ui">
+        <h2 style="margin: 0 0 10px 0; color: #e94560;">BICEP RPG</h2>
+        <div class="stat">Level: <span id="level">1</span></div>
+        <div class="stat">Power: <span id="power">1</span></div>
+        <div class="stat">HP: <span id="hp">100</span> / <span id="maxHp">100</span></div>
+        <div class="stat">Size: <span id="size">20</span></div>
+        <div class="stat">Wins: <span id="wins">0</span></div>
+        <div class="stat">XP: <span id="xp">0</span> / <span id="xpNeeded">10</span></div>
+        <div class="stat" style="margin-top: 10px; font-size: 11px;">Press F3 for Debug</div>
+    </div>
+    
+    <div id="currencyDisplay">
+        Muscle Bucks: <span id="currency">0</span>
+    </div>
+    
+    <button id="inventoryButton" onclick="window.bicepRPGInstance.toggleInventory()">Inventory (I)</button>
+    
+    <div id="inventoryUI">
+        <button class="close-button" onclick="window.bicepRPGInstance.toggleInventory()">X</button>
+        <h2 style="margin: 0 0 20px 0; color: #4169E1;">INVENTORY</h2>
+        
+        <button class="auto-equip-button" onclick="window.bicepRPGInstance.autoEquipBest()">⚡ Auto-Equip Best Gear</button>
+        
+        <div class="inventory-grid">
+            <div class="gear-slots">
+                <h3>Equipped Gear</h3>
+                <div class="gear-slot" data-slot="head">
+                    <span>Head: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="shoulder">
+                    <span>Shoulder: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="bicep">
+                    <span>Bicep: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="chest">
+                    <span>Chest: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="cape">
+                    <span>Cape: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="legs">
+                    <span>Legs: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="boots">
+                    <span>Boots: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="trinket1">
+                    <span>Trinket 1: <span class="slot-item">Empty</span></span>
+                </div>
+                <div class="gear-slot" data-slot="trinket2">
+                    <span>Trinket 2: <span class="slot-item">Empty</span></span>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h4>Total Stats:</h4>
+                    <div id="totalStats" style="font-size: 12px; color: #4ecdc4;"></div>
+                </div>
+            </div>
+            
+            <div class="inventory-bag">
+                <h3>Bag</h3>
+                <div id="inventoryItems" class="item-grid"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="vendorUI">
+        <button class="close-button" onclick="window.bicepRPGInstance.closeVendor()">X</button>
+        <h2 style="margin: 0 0 20px 0; color: #FFD700;">MUSCLE MERCHANT</h2>
+        <div>Your Muscle Bucks: <span id="vendorCurrency">0</span></div>
+        <hr style="margin: 15px 0;">
+        <div id="vendorItems"></div>
+    </div>
+    
+    <div id="abilityBar">
+        <div class="ability" id="ability1" data-key="1">
+            🌀
+            <span class="ability-key">1</span>
+            <div class="cooldown-overlay" style="display: none;"></div>
+        </div>
+        <div class="ability" id="ability2" data-key="2">
+            🚀
+            <span class="ability-key">2</span>
+            <div class="cooldown-overlay" style="display: none;"></div>
+        </div>
+        <div class="ability" id="ability3" data-key="3">
+            📢
+            <span class="ability-key">3</span>
+            <div class="cooldown-overlay" style="display: none;"></div>
+        </div>
+        <div class="ability ultimate" id="abilityUlt" data-key="4">
+            💪
+            <span class="ability-key">4</span>
+            <div class="cooldown-overlay" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div id="debugPanel">
+        <h3 style="margin: 0 0 5px 0; color: #e94560;">DEBUG</h3>
+        <div class="debug-stat">FPS: <span id="fps">0</span></div>
+        <div class="debug-stat">Enemies: <span id="enemyCount">0</span></div>
+        <div class="debug-stat">Bosses: <span id="bossCount">0</span></div>
+        <div class="debug-stat">Portals: <span id="portalCount">0</span></div>
+        <div class="debug-stat">Bonfires: <span id="bonfireCount">0</span></div>
+        <div class="debug-stat">Treasures: <span id="treasureCount">0</span></div>
+        <div class="debug-stat">Particles: <span id="particleCount">0</span></div>
+        <div class="debug-stat">Bullets: <span id="bulletCount">0</span></div>
+        <div class="debug-stat">Weather: <span id="weatherDebug">None</span></div>
+        <div class="debug-stat">Clones: <span id="cloneCount">0</span></div>
+        <div class="debug-stat">Vendors: <span id="vendorCount">0</span></div>
+        <div class="debug-stat">Game Time: <span id="gameTimeDebug">0</span>s</div>
+        <div class="debug-stat">Position: <span id="playerPos">0,0</span></div>
+        <div class="debug-stat">Spawn Ratio: <span id="spawnRatio">balanced</span></div>
+        <div class="debug-stat">Corpses: <span id="corpseCount">0</span></div>
+    </div>
+    
+    <div id="battleUI">
+        <h2 id="enemyName">A ROCK</h2>
+        <div id="enemyPower">Power: 1</div>
+        <div id="battleModifiers" style="color: #FFD700; font-size: 14px;"></div>
+        <div id="enrageTimer" style="color: #e94560; font-size: 18px; display: none;">Enrage in: <span id="enrageTime">0</span>s</div>
+        <div class="tugBar">
+            <div class="tugFill" id="tugFill"></div>
+        </div>
+        <button id="flexButton">💪 FLEX!</button>
+        <button id="fleeButton">🏃 RUN AWAY!</button>
+        <div id="victoryText" style="display: none;">VICTORY! +<span id="xpGain">0</span> XP</div>
+        <div id="defeatText" style="display: none;">DEFEATED! Try something weaker...</div>
+    </div>
+    
+    <div id="parryUI">
+        <h2 id="bulletType">PARRY THE CANNONBALL!</h2>
+        <div>Click when the indicator is in the green zone!</div>
+        <div class="parryZone">
+            <div class="parryTarget"></div>
+            <div class="parryIndicator" id="parryIndicator"></div>
+        </div>
+        <button id="parryButton">⚔️ PARRY!</button>
+    </div>
+    
+    <div id="dungeonUI">
+        <h3 style="margin: 0; color: #FFD700;">DUNGEON</h3>
+        <div>Time Left: <span class="dungeon-timer" id="dungeonTimer">5:00</span></div>
+        <div>Enemies Left: <span id="dungeonEnemies">0</span></div>
+        <div>Boss: <span id="dungeonBoss">Alive</span></div>
+        <div>Press E to Exit</div>
+    </div>
+    
+    <script>
+// Bicep RPG v2 - Enhanced with more features
+(function() {
+    console.log("Initializing Bicep RPG v2...");
+    
+    // Canvas and contexts
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const minimapCanvas = document.getElementById('minimap');
+    const minimapCtx = minimapCanvas.getContext('2d');
+    
+    // Debug
+    let debugMode = false;
+    let frameCount = 0;
+    let lastFPSUpdate = Date.now();
+    let currentFPS = 0;
+    
+    // Game state
+    let gamePaused = false;
+    let inBattle = false;
+    let inDungeon = false;
+    let inPortal = false;
+    let inParry = false;
+    let animationId = null;
+    let battleTimer = null;
+    let gameTime = 0;
+    
+    // Player
+    let player = {
+        x: 400,
+        y: 300,
+        level: 1,
+        power: 1,
+        basePower: 1,
+        xp: 0,
+        xpNeeded: 10,
+        wins: 0,
+        speed: 2,
+        baseSpeed: 2,
+        size: 20,
+        hp: 100,
+        maxHp: 100,
+        baseMaxHp: 100,
+        hpRegen: 0.1,
+        currency: 0,
+        respawnX: 400,
+        respawnY: 300,
+        phasing: false,
+        phaseTimer: 0,
+        motivatedTimer: 0,
+        equipped: {},
+        inventory: [],
+        stats: {
+            powerBonus: 0,
+            hpBonus: 0,
+            speedBonus: 0,
+            regenBonus: 0,
+            xpBonus: 0,
+            currencyBonus: 0,
+            cooldownReduction: 0
+        }
+    };
+    
+    // Core game data
+    let enemies = [];
+    let bosses = [];
+    let particles = [];
+    let portals = [];
+    let treasures = [];
+    let dungeons = [];
+    let bullets = [];
+    let weatherEffects = [];
+    let shadowClones = [];
+    let vendors = [];
+    let bonfires = [];
+    let corpses = [];
+    
+    // Current states
+    let currentEnemy = null;
+    let currentDungeon = null;
+    let parryBullet = null;
+    let lastBonfire = null;
+    let savedWorldState = null;
+    let tugPosition = 50;
+    let parryPosition = 0;
+    let parrySpeed = 5;
+    let parryDirection = 1;
+    let portalTimer = 0;
+    let lastSpawnTime = 0;
+    let currentSpawnMode = "balanced";
+    let battleModifiers = { speedMult: 1, powerMult: 1 };
+    let vendorCooldown = 0;
+    let lastVendor = null;
+    let enrageTimer = null;
+    let currentEnrageTime = 0;
+    
+    let world = {
+        offsetX: 0,
+        offsetY: 0,
+        zoom: 1,
+        targetZoom: 1
+    };
+    
+    // Input
+    let keys = {};
+    
+    // Abilities
+    let abilities = {
+        quantumBurp: { cooldown: 0, maxCooldown: 300 },
+        existentialYeet: { cooldown: 0, maxCooldown: 600 },
+        motivationalScream: { cooldown: 0, maxCooldown: 900 },
+        shadowClone: { cooldown: 0, maxCooldown: 1800, charges: 0, maxCharges: 100 }
+    };
+    
+    // Enemy types
+    const enemyTypes = [
+        { name: "Pebble", power: 0.5, color: "#888", size: 10, xp: 1 },
+        { name: "Stick", power: 1, color: "#8B4513", size: 15, xp: 2 },
+        { name: "Rock", power: 2, color: "#666", size: 20, xp: 3 },
+        { name: "Angry Squirrel", power: 3, color: "#8B6914", size: 25, xp: 5, hasEnrage: true, enrageTime: 20 },
+        { name: "Fire Hydrant", power: 5, color: "#FF0000", size: 30, xp: 8 },
+        { name: "Small Dog", power: 8, color: "#D2691E", size: 35, xp: 12, hasEnrage: true, enrageTime: 30 },
+        { name: "Tree", power: 12, color: "#228B22", size: 50, xp: 18 },
+        { name: "Car", power: 20, color: "#4169E1", size: 60, xp: 30 },
+        { name: "House", power: 35, color: "#8B7355", size: 80, xp: 50 },
+        { name: "Building", power: 60, color: "#708090", size: 100, xp: 80, hasEnrage: true, enrageTime: 45 },
+        { name: "Small Mountain", power: 100, color: "#8B7D6B", size: 120, xp: 150 },
+        { name: "Cloud", power: 150, color: "#F0F8FF", size: 140, xp: 200 },
+        { name: "The Moon", power: 300, color: "#F0E68C", size: 160, xp: 400, hasEnrage: true, enrageTime: 60 },
+        { name: "Planet", power: 500, color: "#4682B4", size: 180, xp: 700 },
+        { name: "Black Hole", power: 1000, color: "#000000", size: 200, xp: 1500, hasEnrage: true, enrageTime: 90 }
+    ];
+    
+    // Creature modifiers
+    const creatureModifiers = [
+        { name: "Tiny", powerMult: 0.5, xpMult: 0.8, color: "#87CEEB", effect: null },
+        { name: "Weak", powerMult: 0.7, xpMult: 0.9, color: "#DDA0DD", effect: null },
+        { name: "", powerMult: 1, xpMult: 1, color: null, effect: null },
+        { name: "Angry", powerMult: 1.3, xpMult: 1.2, color: "#FF6347", effect: null },
+        { name: "Intelligent", powerMult: 1.5, xpMult: 2, color: "#4169E1", effect: null },
+        { name: "Lucky", powerMult: 1.5, xpMult: 3, color: "#FFD700", effect: "lucky" },
+        { name: "Shielded", powerMult: 2, xpMult: 1.8, color: "#1E90FF", effect: "shielded" },
+        { name: "Vampiric", powerMult: 2.2, xpMult: 2, color: "#8B0000", effect: "vampiric" },
+        { name: "Explosive", powerMult: 1.5, xpMult: 1.5, color: "#FF4500", effect: "explosive" },
+        { name: "Splitting", powerMult: 1.4, xpMult: 1.6, color: "#32CD32", effect: "splitting" }
+    ];
+    
+    // Gear modifiers
+    const gearModifiers = [
+        { name: "of Power", stats: { powerBonus: 5 }, weight: 20 },
+        { name: "of Vitality", stats: { hpBonus: 20 }, weight: 20 },
+        { name: "of Speed", stats: { speedBonus: 0.3 }, weight: 15 },
+        { name: "of Regeneration", stats: { regenBonus: 0.2 }, weight: 15 },
+        { name: "of Fortune", stats: { currencyBonus: 0.2 }, weight: 10 },
+        { name: "of Wisdom", stats: { xpBonus: 0.2 }, weight: 10 },
+        { name: "of Alacrity", stats: { cooldownReduction: 0.1 }, weight: 10 }
+    ];
+    
+    const rarities = [
+        { name: "common", color: "#888", multiplier: 1, weight: 50 },
+        { name: "uncommon", color: "#4ecdc4", multiplier: 1.5, weight: 30 },
+        { name: "rare", color: "#4169E1", multiplier: 2, weight: 15 },
+        { name: "epic", color: "#9400D3", multiplier: 3, weight: 4 },
+        { name: "legendary", color: "#FFD700", multiplier: 5, weight: 1 }
+    ];
+    
+    // Spawn rates
+    const spawnRates = {
+        enemy: 60,
+        boss: 600,
+        portal: 300,
+        treasure: 180,
+        dungeon: 600,
+        weather: 300,
+        vendor: 600
+    };
+    
+    let lastSpawnTimes = {
+        enemy: 0,
+        boss: 0,
+        portal: 0,
+        treasure: 0,
+        dungeon: 0,
+        weather: 0,
+        vendor: 0
+    };
+    
+    // Helper functions
+    function weightedRandom(items, weights) {
+        let totalWeight = weights.reduce((a, b) => a + b, 0);
+        let random = Math.random() * totalWeight;
+        
+        for (let i = 0; i < items.length; i++) {
+            random -= weights[i];
+            if (random <= 0) {
+                return items[i];
+            }
+        }
+        
+        return items[items.length - 1];
+    }
+    
+    // Initialize the game
+    function initialize() {
+        console.log("Starting game...");
+        
+        spawnEnemies();
+        
+        // Create initial bonfire
+        bonfires.push({
+            x: player.x,
+            y: player.y,
+            lit: true,
+            id: 'start'
+        });
+        lastBonfire = bonfires[0];
+        player.respawnX = player.x;
+        player.respawnY = player.y;
+        
+        // Give starting gear
+        player.inventory.push(createGear('bicep'));
+        player.inventory.push(createGear('boots'));
+        
+        // Give some starting currency for testing
+        player.currency = 50;
+        
+        updateUI();
+        updateAbilityUI();
+        gameLoop();
+    }
+    
+    // Create enemy with modifiers
+    function createEnemy(x, y, forceType = null) {
+        let type = forceType || enemyTypes[Math.floor(Math.random() * Math.min(player.level + 2, enemyTypes.length))];
+        
+        // Validate enemy position and type
+        if (!type || !type.size || type.size <= 0) {
+            console.error("Invalid enemy type:", type);
+            return null;
+        }
+        
+        if (isNaN(x) || isNaN(y)) {
+            console.error("Invalid enemy position:", x, y);
+            return null;
+        }
+        
+        // Add modifiers
+        let modifiers = [];
+        let modifier = null;
+        if (Math.random() < 0.3) {
+            modifier = creatureModifiers[Math.floor(Math.random() * creatureModifiers.length)];
+            if (modifier.name !== "") {
+                modifiers.push(modifier);
+            }
+        }
+        
+        let totalPowerMult = 1;
+        let totalXpMult = 1;
+        let effects = [];
+        let modifierNames = [];
+        let color = type.color;
+        
+        modifiers.forEach(mod => {
+            totalPowerMult *= mod.powerMult;
+            totalXpMult *= mod.xpMult;
+            if (mod.effect) effects.push(mod.effect);
+            if (mod.name) modifierNames.push(mod.name);
+            if (mod.color) color = mod.color;
+        });
+        
+        return {
+            x: x,
+            y: y,
+            baseType: type,
+            modifiers: modifiers,
+            type: {
+                name: (modifierNames.length > 0 ? modifierNames.join(" ") + " " : "") + type.name,
+                power: type.power * totalPowerMult,
+                color: color,
+                size: type.size,
+                xp: type.xp * totalXpMult
+            },
+            effects: effects,
+            wanderAngle: Math.random() * Math.PI * 2,
+            wanderSpeed: 0.5 + Math.random() * 0.5,
+            hasEnrage: type.hasEnrage || false,
+            enrageTime: type.enrageTime || 0,
+            isEnraged: false,
+            currency: Math.floor(type.xp * 2 * totalXpMult),
+            shield: effects.includes("shielded") ? 100 : 0,
+            onFire: false,
+            fireTimer: 0
+        };
+    }
+    
+    // Simple enemy spawning
+    function spawnEnemies() {
+        for (let i = 0; i < 10; i++) {
+            let angle = (i / 10) * Math.PI * 2;
+            let distance = 100 + Math.random() * 200;
+            let enemy = createEnemy(
+                player.x + Math.cos(angle) * distance,
+                player.y + Math.sin(angle) * distance
+            );
+            if (enemy) {
+                enemies.push(enemy);
+            }
+        }
+        console.log("Spawned " + enemies.length + " enemies");
+    }
+    
+    // Create gear
+    function createGear(slot, forceRarity = null) {
+        const gearTypes = {
+            head: ["Headband", "Crown", "Helmet", "Bandana", "Sweatband"],
+            shoulder: ["Pauldrons", "Guards", "Pads", "Spikes", "Plates"],
+            bicep: ["Band", "Wrap", "Sleeve", "Guard", "Brace"],
+            chest: ["Shirt", "Vest", "Armor", "Harness", "Plate"],
+            cape: ["Cape", "Cloak", "Mantle", "Shroud", "Wings"],
+            legs: ["Shorts", "Pants", "Leggings", "Guards", "Plates"],
+            boots: ["Sneakers", "Boots", "Cleats", "Sandals", "Greaves"],
+            trinket1: ["Ring", "Amulet", "Charm", "Relic", "Totem"],
+            trinket2: ["Ring", "Amulet", "Charm", "Relic", "Totem"]
+        };
+        
+        let rarity = forceRarity || weightedRandom(rarities, rarities.map(r => r.weight));
+        let type = gearTypes[slot][Math.floor(Math.random() * gearTypes[slot].length)];
+        let modifier = weightedRandom(gearModifiers, gearModifiers.map(m => m.weight));
+        
+        let gear = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: `${type} ${modifier.name}`,
+            slot: slot,
+            rarity: rarity.name,
+            color: rarity.color,
+            stats: {},
+            value: Math.floor((10 + Math.random() * 50) * rarity.multiplier)
+        };
+        
+        // Apply rarity multiplier to stats
+        for (let stat in modifier.stats) {
+            gear.stats[stat] = modifier.stats[stat] * rarity.multiplier;
+        }
+        
+        return gear;
+    }
+    
+    // Create boss
+    function spawnBoss() {
+        let bossType = enemyTypes[Math.min(player.level + 5, enemyTypes.length - 1)];
+        let boss = {
+            x: player.x + (Math.random() - 0.5) * 1000,
+            y: player.y + (Math.random() - 0.5) * 1000,
+            type: {
+                name: "BOSS " + bossType.name,
+                power: bossType.power * 5,
+                color: "#FF0000",
+                size: bossType.size * 2,
+                xp: bossType.xp * 10
+            },
+            speed: 1.5,
+            aggro: false,
+            aggroDistance: 300,
+            leashDistance: 600,
+            homeX: 0,
+            homeY: 0,
+            effects: [],
+            currency: bossType.xp * 20,
+            hasEnrage: true,
+            enrageTime: 120,
+            isEnraged: false
+        };
+        boss.homeX = boss.x;
+        boss.homeY = boss.y;
+        bosses.push(boss);
+        console.log("Boss spawned!");
+    }
+    
+    // Create portal
+    function spawnPortal() {
+        portals.push({
+            x: player.x + (Math.random() - 0.5) * 800,
+            y: player.y + (Math.random() - 0.5) * 800,
+            size: 60,
+            pulsePhase: 0
+        });
+        console.log("Portal spawned!");
+    }
+    
+    // Create treasure
+    function spawnTreasure() {
+        let isMimic = Math.random() < 0.3;
+        let hasGear = Math.random() < 0.5;
+        let gear = null;
+        if (hasGear && !isMimic) {
+            const gearSlots = ['head', 'shoulder', 'bicep', 'chest', 'cape', 'legs', 'boots', 'trinket1', 'trinket2'];
+            gear = createGear(gearSlots[Math.floor(Math.random() * gearSlots.length)]);
+        }
+        
+        treasures.push({
+            x: player.x + (Math.random() - 0.5) * 1000,
+            y: player.y + (Math.random() - 0.5) * 1000,
+            size: 30,
+            isMimic: isMimic,
+            opened: false,
+            xp: isMimic ? 0 : 50 + Math.floor(Math.random() * 100),
+            currency: isMimic ? 0 : 20 + Math.floor(Math.random() * 80),
+            gear: gear
+        });
+    }
+    
+    // Create vendor
+    function spawnVendor() {
+        let vendor = {
+            x: player.x + (Math.random() - 0.5) * 600,
+            y: player.y + (Math.random() - 0.5) * 600,
+            size: 40,
+            items: []
+        };
+        
+        // Generate items for sale
+        const gearSlots = ['head', 'shoulder', 'bicep', 'chest', 'cape', 'legs', 'boots', 'trinket1', 'trinket2'];
+        let itemCount = 3 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < itemCount; i++) {
+            let gear = createGear(gearSlots[Math.floor(Math.random() * gearSlots.length)]);
+            gear.price = Math.floor(gear.value * (1.5 + Math.random()));
+            vendor.items.push(gear);
+        }
+        
+        vendors.push(vendor);
+        console.log("Vendor spawned!");
+    }
+    
+    // Create weather
+    function spawnWeather() {
+        const weatherTypes = [
+            { 
+                name: "Fire Storm", 
+                color: "rgba(255, 69, 0, 0.3)", 
+                effect: "damage", 
+                duration: 300, 
+                damageRate: 0.5,
+                gridBased: true
+            },
+            { 
+                name: "Ice Storm", 
+                color: "rgba(135, 206, 235, 0.3)", 
+                effect: "slow", 
+                duration: 450, 
+                slowFactor: 0.3 
+            },
+            {
+                name: "Lightning Storm",
+                color: "rgba(255, 255, 0, 0.3)",
+                effect: "strike",
+                duration: 400,
+                strikeInterval: 60,
+                strikeDamage: 10
+            }
+        ];
+        
+        let weather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+        let effect = {
+            type: weather,
+            x: player.x + (Math.random() - 0.5) * 1000,
+            y: player.y + (Math.random() - 0.5) * 1000,
+            radius: 200 + Math.random() * 200,
+            timer: weather.duration,
+            active: true
+        };
+        
+        // Initialize fire grid if it's a fire storm
+        if (weather.gridBased && weather.effect === "damage") {
+            effect.fireGrid = {};
+            // Start with a single fire cell
+            let gridX = Math.floor(effect.x / 50);
+            let gridY = Math.floor(effect.y / 50);
+            effect.fireGrid[`${gridX},${gridY}`] = true;
+        }
+        
+        weatherEffects.push(effect);
+        console.log(`Weather spawned: ${weather.name}`);
+    }
+    
+    // Create shadow clone
+    function createShadowClone() {
+        if (abilities.shadowClone.charges < abilities.shadowClone.maxCharges) {
+            return;
+        }
+        
+        abilities.shadowClone.charges = 0;
+        abilities.shadowClone.cooldown = abilities.shadowClone.maxCooldown;
+        
+        let clone = {
+            x: player.x,
+            y: player.y,
+            power: player.power * 0.8,
+            size: player.size * 0.8,
+            target: null,
+            life: 600, // 10 seconds
+            speed: 3
+        };
+        shadowClones.push(clone);
+        
+        // Spawn particles
+        for (let i = 0; i < 20; i++) {
+            particles.push({
+                x: clone.x,
+                y: clone.y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                life: 1,
+                color: "#e94560"
+            });
+        }
+    }
+    
+    // Game loop
+    function gameLoop() {
+        if (!gamePaused && !inBattle && !inParry) {
+            updateWorld();
+        } else if (inParry) {
+            updateParry();
+        }
+        draw();
+        updateDebug();
+        animationId = requestAnimationFrame(gameLoop);
+    }
+    
+    // Update fire spread
+    function updateFireSpread(weather) {
+        if (!weather.fireGrid) return;
+        
+        // Limit fire spread size to prevent infinite growth
+        let currentFireCells = Object.keys(weather.fireGrid).length;
+        if (currentFireCells > 150) {
+            // Start removing old fire cells randomly
+            let keys = Object.keys(weather.fireGrid);
+            for (let i = 0; i < 10; i++) {
+                let randomKey = keys[Math.floor(Math.random() * keys.length)];
+                delete weather.fireGrid[randomKey];
+            }
+        }
+        
+        // Spread fire every 30 frames
+        if (gameTime % 30 === 0) {
+            let newCells = {};
+            
+            // Check each existing fire cell
+            for (let key in weather.fireGrid) {
+                let [x, y] = key.split(',').map(Number);
+                
+                // Try to spread to adjacent cells (reduced spread chance)
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        
+                        let newKey = `${x + dx},${y + dy}`;
+                        if (!weather.fireGrid[newKey] && Math.random() < 0.2) { // Reduced from 0.3 to 0.2
+                            newCells[newKey] = true;
+                        }
+                    }
+                }
+            }
+            
+            // Add new fire cells (limit to prevent explosive growth)
+            let newCellCount = Object.keys(newCells).length;
+            if (currentFireCells + newCellCount < 200) {
+                Object.assign(weather.fireGrid, newCells);
+            }
+            
+            // Check if enemies are in fire
+            [...enemies, ...bosses].forEach(enemy => {
+                let gridX = Math.floor(enemy.x / 50);
+                let gridY = Math.floor(enemy.y / 50);
+                let key = `${gridX},${gridY}`;
+                
+                if (weather.fireGrid[key] && !enemy.onFire) {
+                    enemy.onFire = true;
+                    enemy.fireTimer = 300; // 5 seconds
+                    enemy.type.power *= 1.5; // Buff enemy
+                    enemy.originalPower = enemy.type.power / 1.5; // Store original
+                }
+            });
+        }
+    }
+    
+    // Update world
+    function updateWorld() {
+        gameTime++;
+        
+        // Movement - Store previous position to fix camera jump
+        let prevX = player.x;
+        let prevY = player.y;
+        
+        if (keys.w) player.y -= player.speed;
+        if (keys.s) player.y += player.speed;
+        if (keys.a) player.x -= player.speed;
+        if (keys.d) player.x += player.speed;
+        
+        // Update camera smoothly
+        world.targetZoom = Math.max(0.3, Math.min(1, 40 / player.size));
+        world.zoom += (world.targetZoom - world.zoom) * 0.1;
+        world.offsetX = player.x - canvas.width / 2 / world.zoom;
+        world.offsetY = player.y - canvas.height / 2 / world.zoom;
+        
+        // Update abilities
+        Object.keys(abilities).forEach(key => {
+            if (abilities[key].cooldown > 0) {
+                abilities[key].cooldown--;
+            }
+        });
+        
+        // Shadow clone charge building
+        if (abilities.shadowClone.charges < abilities.shadowClone.maxCharges) {
+            abilities.shadowClone.charges += 0.1;
+        }
+        
+        // Update phase timer
+        if (player.phaseTimer > 0) {
+            player.phaseTimer--;
+            if (player.phaseTimer === 0) {
+                player.phasing = false;
+            }
+        }
+        
+        // Update motivated timer
+        if (player.motivatedTimer > 0) {
+            player.motivatedTimer--;
+        }
+        
+        // HP regeneration
+        if (player.hp < player.maxHp) {
+            player.hp = Math.min(player.maxHp, player.hp + player.hpRegen);
+            updateUI();
+        }
+        
+        // Check spawns
+        Object.keys(spawnRates).forEach(type => {
+            if (gameTime - lastSpawnTimes[type] >= spawnRates[type]) {
+                lastSpawnTimes[type] = gameTime;
+                
+                switch(type) {
+                    case 'enemy':
+                        if (enemies.length < 30) {
+                            let newEnemy = createEnemy(
+                                player.x + (Math.random() - 0.5) * 1000,
+                                player.y + (Math.random() - 0.5) * 1000
+                            );
+                            enemies.push(newEnemy);
+                        }
+                        break;
+                    case 'boss':
+                        if (bosses.length < 3) spawnBoss();
+                        break;
+                    case 'portal':
+                        if (portals.length < 3) spawnPortal();
+                        break;
+                    case 'treasure':
+                        if (treasures.length < 10) spawnTreasure();
+                        break;
+                    case 'weather':
+                        if (weatherEffects.length < 1) spawnWeather(); // Reduced from 2 to 1
+                        break;
+                    case 'vendor':
+                        if (vendors.length < 2) spawnVendor();
+                        break;
+                }
+            }
+        });
+        
+        // Portal timer
+        if (inPortal) {
+            portalTimer--;
+            if (portalTimer <= 0) {
+                inPortal = false;
+                recalculateStats();
+                updateUI();
+            }
+        }
+        
+        // Update corpses
+        corpses = corpses.filter(corpse => {
+            corpse.timer--;
+            
+            // Check if player picks up corpse
+            let dx = corpse.x - player.x;
+            let dy = corpse.y - player.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < player.size + corpse.size) {
+                player.currency += corpse.muscleBucks;
+                updateUI();
+                
+                // Particles
+                for (let i = 0; i < 20; i++) {
+                    particles.push({
+                        x: corpse.x,
+                        y: corpse.y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: -Math.random() * 8,
+                        life: 1,
+                        color: "#FFD700"
+                    });
+                }
+                
+                return false;
+            }
+            
+            return corpse.timer > 0;
+        });
+        
+        // Update portals
+        portals = portals.filter(portal => {
+            let dx = portal.x - player.x;
+            let dy = portal.y - player.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            portal.pulsePhase += 0.1;
+            
+            if (distance < player.size + portal.size / 2 && !inPortal) {
+                inPortal = true;
+                portalTimer = 300; // 5 seconds
+                // Don't modify player.power directly, handle in recalculateStats
+                recalculateStats();
+                updateUI();
+                
+                for (let i = 0; i < 30; i++) {
+                    particles.push({
+                        x: portal.x,
+                        y: portal.y,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10,
+                        life: 1,
+                        color: "#9400D3"
+                    });
+                }
+                return false;
+            }
+            return true;
+        });
+        
+        // Update treasures
+        treasures = treasures.filter(treasure => {
+            let dx = treasure.x - player.x;
+            let dy = treasure.y - player.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < player.size + treasure.size / 2 && !treasure.opened) {
+                treasure.opened = true;
+                
+                if (treasure.isMimic) {
+                    let mimic = createEnemy(treasure.x, treasure.y, 
+                        enemyTypes[Math.min(player.level + 3, enemyTypes.length - 1)]);
+                    mimic.type.name = "MIMIC " + mimic.type.name;
+                    mimic.type.power *= 2;
+                    mimic.type.xp *= 3;
+                    mimic.currency *= 3;
+                    enemies.push(mimic);
+                    console.log("It's a mimic!");
+                } else {
+                    player.xp += treasure.xp * (1 + player.stats.xpBonus);
+                    player.currency += Math.floor(treasure.currency * (1 + player.stats.currencyBonus));
+                    
+                    if (treasure.gear) {
+                        player.inventory.push(treasure.gear);
+                        console.log(`Found gear: ${treasure.gear.name}`);
+                    }
+                    
+                    while (player.xp >= player.xpNeeded) {
+                        player.xp -= player.xpNeeded;
+                        player.level++;
+                        player.basePower = Math.floor(player.level * 1.5);
+                        player.baseMaxHp = 100 + player.level * 20;
+                        player.xpNeeded = Math.floor(player.level * 10 * 1.2);
+                        player.baseSpeed = 2 + player.level * 0.1;
+                        player.size = 20 + player.level * 2;
+                        recalculateStats();
+                    }
+                    updateUI();
+                    
+                    for (let i = 0; i < 20; i++) {
+                        particles.push({
+                            x: treasure.x,
+                            y: treasure.y,
+                            vx: (Math.random() - 0.5) * 8,
+                            vy: -Math.random() * 8,
+                            life: 1,
+                            color: "#FFD700"
+                        });
+                    }
+                }
+                
+                return false;
+            }
+            
+            return !treasure.opened;
+        });
+        
+        // Vendor interaction
+        if (vendorCooldown > 0) {
+            vendorCooldown--;
+        }
+        
+        vendors.forEach(vendor => {
+            let dx = vendor.x - player.x;
+            let dy = vendor.y - player.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < player.size + vendor.size && vendorCooldown === 0 && vendor !== lastVendor) {
+                openVendor(vendor);
+                lastVendor = vendor;
+            }
+            
+            // Clear lastVendor if we've moved away
+            if (lastVendor === vendor && distance > player.size + vendor.size + 50) {
+                lastVendor = null;
+            }
+        });
+        
+        // Update weather effects
+        weatherEffects.forEach(weather => {
+            // Update fire spread
+            if (weather.type.gridBased) {
+                updateFireSpread(weather);
+            }
+            
+            let dx = weather.x - player.x;
+            let dy = weather.y - player.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Check if player is in bonfire safe zone
+            let inBonfireSafeZone = bonfires.some(bonfire => {
+                if (!bonfire.lit) return false;
+                let bonfireDx = bonfire.x - player.x;
+                let bonfireDy = bonfire.y - player.y;
+                let bonfireDistance = Math.sqrt(bonfireDx * bonfireDx + bonfireDy * bonfireDy);
+                return bonfireDistance < player.size + 30;
+            });
+
+            if (distance < weather.radius && weather.active && !inBonfireSafeZone) {
+                switch(weather.type.effect) {
+                    case "slow":
+                        player.speed = (player.baseSpeed + player.stats.speedBonus) * weather.type.slowFactor;
+                        break;
+                    case "damage":
+                        // Check if player is in fire grid
+                        if (weather.fireGrid) {
+                            let gridX = Math.floor(player.x / 50);
+                            let gridY = Math.floor(player.y / 50);
+                            let key = `${gridX},${gridY}`;
+                            
+                            if (weather.fireGrid[key] && gameTime % 60 === 0) {
+                                console.log("Fire damage:", weather.type.damageRate, "at position", gridX, gridY);
+                                player.hp -= weather.type.damageRate;
+                                if (player.hp <= 0) player.hp = 1;
+                                updateUI();
+                            }
+                        }
+                        break;
+                    case "strike":
+                        if (gameTime % weather.type.strikeInterval === 0) {
+                            if (Math.random() < 0.3) {
+                                console.log("Lightning strike damage:", weather.type.strikeDamage);
+                                player.hp -= weather.type.strikeDamage;
+                                if (player.hp <= 0) player.hp = 1;
+                                updateUI();
+                                for (let i = 0; i < 10; i++) {
+                                    particles.push({
+                                        x: player.x,
+                                        y: player.y,
+                                        vx: (Math.random() - 0.5) * 10,
+                                        vy: -Math.random() * 10,
+                                        life: 1,
+                                        color: "#FFFF00"
+                                    });
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+        });
+        
+        // Update weather timers
+        weatherEffects = weatherEffects.filter(weather => {
+            weather.timer--;
+            if (weather.timer <= 0) {
+                weather.active = false;
+                return false;
+            }
+            return true;
+        });
+        
+        // Update enemies
+        enemies = enemies.filter(enemy => {
+            // Filter out null or invalid enemies
+            if (!enemy || !enemy.type || enemy.type.size <= 0 || isNaN(enemy.x) || isNaN(enemy.y)) {
+                console.warn("Removing invalid enemy:", enemy);
+                return false;
+            }
+            
+            // Fire damage
+            if (enemy.onFire && enemy.fireTimer > 0) {
+                enemy.fireTimer--;
+                
+                // Fire particles
+                if (gameTime % 10 === 0) {
+                    particles.push({
+                        x: enemy.x + (Math.random() - 0.5) * enemy.type.size,
+                        y: enemy.y + (Math.random() - 0.5) * enemy.type.size,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: -Math.random() * 3,
+                        life: 1,
+                        color: "#FF4500"
+                    });
+                }
+                
+                if (enemy.fireTimer <= 0) {
+                    enemy.onFire = false;
+                    // Restore original power
+                    if (enemy.originalPower) {
+                        enemy.type.power = enemy.originalPower;
+                        delete enemy.originalPower;
+                    }
+                }
+            }
+            
+            // Movement
+            enemy.wanderAngle += (Math.random() - 0.5) * 0.1;
+            enemy.x += Math.cos(enemy.wanderAngle) * enemy.wanderSpeed;
+            enemy.y += Math.sin(enemy.wanderAngle) * enemy.wanderSpeed;
+            
+            // Check collision with player
+            let dx = enemy.x - player.x;
+            let dy = enemy.y - player.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Update flee cooldown
+            if (enemy.fleeCooldown > 0) {
+                enemy.fleeCooldown--;
+            }
+            
+            if (distance < player.size + enemy.type.size / 2 && !player.phasing && !inBattle && (!enemy.fleeCooldown || enemy.fleeCooldown <= 0)) {
+                startBattle(enemy);
+            }
+            
+            // Remove if too far
+            return distance < 1500;
+        });
+        
+        // Update bosses
+        bosses = bosses.filter(boss => {
+            let dx = boss.x - player.x;
+            let dy = boss.y - player.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (!boss.aggro && distance < boss.aggroDistance) {
+                boss.aggro = true;
+            }
+            
+            if (boss.aggro) {
+                let angle = Math.atan2(dy, dx);
+                boss.x -= Math.cos(angle) * boss.speed;
+                boss.y -= Math.sin(angle) * boss.speed;
+                
+                if (distance < player.size + boss.type.size / 2 && !player.phasing && !inBattle) {
+                    startBattle(boss, true);
+                    return false;
+                }
+                
+                let homeDx = boss.x - boss.homeX;
+                let homeDy = boss.y - boss.homeY;
+                let homeDistance = Math.sqrt(homeDx * homeDx + homeDy * homeDy);
+                
+                if (homeDistance > boss.leashDistance || distance > boss.leashDistance) {
+                    boss.aggro = false;
+                    boss.x = boss.homeX;
+                    boss.y = boss.homeY;
+                }
+            }
+            
+            return true;
+        });
+        
+        // Update shadow clones
+        shadowClones = shadowClones.filter(clone => {
+            clone.life--;
+            
+            // Find target
+            if (!clone.target || clone.target.dead) {
+                let closestEnemy = null;
+                let closestDist = Infinity;
+                
+                [...enemies, ...bosses].forEach(enemy => {
+                    let dx = enemy.x - clone.x;
+                    let dy = enemy.y - clone.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closestEnemy = enemy;
+                    }
+                });
+                
+                clone.target = closestEnemy;
+            }
+            
+            // Move towards target
+            if (clone.target) {
+                let dx = clone.target.x - clone.x;
+                let dy = clone.target.y - clone.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0) {
+                    clone.x += (dx / dist) * clone.speed;
+                    clone.y += (dy / dist) * clone.speed;
+                }
+                
+                // Battle if close
+                if (dist < clone.size + clone.target.type.size / 2) {
+                    if (clone.power > clone.target.type.power) {
+                        // Win - give player XP
+                        player.xp += Math.floor(clone.target.type.xp * (1 + player.stats.xpBonus));
+                        player.currency += Math.floor((clone.target.currency || 0) * (1 + player.stats.currencyBonus));
+                        
+                        while (player.xp >= player.xpNeeded) {
+                            player.xp -= player.xpNeeded;
+                            player.level++;
+                            player.basePower = Math.floor(player.level * 1.5);
+                            player.baseMaxHp = 100 + player.level * 20;
+                            player.xpNeeded = Math.floor(player.level * 10 * 1.2);
+                            player.baseSpeed = 2 + player.level * 0.1;
+                            player.size = 20 + player.level * 2;
+                            recalculateStats();
+                        }
+                        updateUI();
+                        
+                        // Remove enemy
+                        enemies = enemies.filter(e => e !== clone.target);
+                        bosses = bosses.filter(b => b !== clone.target);
+                        clone.target.dead = true;
+                        
+                        // Particles
+                        for (let i = 0; i < 20; i++) {
+                            particles.push({
+                                x: clone.target.x,
+                                y: clone.target.y,
+                                vx: (Math.random() - 0.5) * 8,
+                                vy: (Math.random() - 0.5) * 8,
+                                life: 1,
+                                color: clone.target.type.color
+                            });
+                        }
+                    } else {
+                        // Lose - clone dies
+                        clone.life = 0;
+                    }
+                }
+            }
+            
+            return clone.life > 0;
+        });
+        
+        // Update particles
+        particles = particles.filter(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.05;
+            p.vy += 0.3;
+            return p.life > 0;
+        });
+        
+        updateAbilityUI();
+    }
+    
+    function updateParry() {
+        parryPosition += parrySpeed * parryDirection;
+        
+        if (parryPosition <= 0 || parryPosition >= 300) {
+            parryDirection *= -1;
+            parrySpeed *= 1.1;
+        }
+        
+        document.getElementById('parryIndicator').style.left = parryPosition + 'px';
+    }
+    
+    // Draw everything
+    function draw() {
+        // Clear canvas
+        ctx.fillStyle = inDungeon ? '#2a1a3e' : '#16213e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Phase overlay
+        if (player.phasing) {
+            ctx.fillStyle = 'rgba(148, 0, 211, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        ctx.save();
+        ctx.scale(world.zoom, world.zoom);
+        ctx.translate(-world.offsetX, -world.offsetY);
+        
+        // Draw grid
+        ctx.strokeStyle = inDungeon ? '#3f2957' : '#1f2937';
+        ctx.lineWidth = 1 / world.zoom;
+        let gridSize = 50;
+        let startX = Math.floor(world.offsetX / gridSize) * gridSize;
+        let startY = Math.floor(world.offsetY / gridSize) * gridSize;
+        let endX = startX + (canvas.width / world.zoom) + gridSize;
+        let endY = startY + (canvas.height / world.zoom) + gridSize;
+        
+        for (let x = startX; x < endX; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, startY);
+            ctx.lineTo(x, endY);
+            ctx.stroke();
+        }
+        for (let y = startY; y < endY; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(startX, y);
+            ctx.lineTo(endX, y);
+            ctx.stroke();
+        }
+        
+        // Draw weather effects
+        weatherEffects.forEach(weather => {
+            if (weather.type.gridBased && weather.fireGrid) {
+                // Draw fire grid
+                ctx.fillStyle = weather.type.color;
+                for (let key in weather.fireGrid) {
+                    let [x, y] = key.split(',').map(Number);
+                    ctx.fillRect(x * 50, y * 50, 50, 50);
+                }
+            } else {
+                // Draw circular weather
+                ctx.fillStyle = weather.type.color;
+                ctx.beginPath();
+                ctx.arc(weather.x, weather.y, weather.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${16 / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText(weather.type.name, weather.x, weather.y - weather.radius - 10);
+        });
+        
+        // Draw bonfires
+        bonfires.forEach(bonfire => {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(bonfire.x - 20, bonfire.y + 10, 40, 10);
+            
+            if (bonfire.lit) {
+                // Safe zone circle
+                ctx.strokeStyle = 'rgba(255, 165, 0, 0.3)';
+                ctx.lineWidth = 2 / world.zoom;
+                ctx.beginPath();
+                ctx.arc(bonfire.x, bonfire.y, player.size + 30, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Fire
+                for (let i = 0; i < 3; i++) {
+                    let flameHeight = 20 + Math.sin(gameTime * 0.1 + i) * 5;
+                    ctx.fillStyle = '#FF4500';
+                    ctx.beginPath();
+                    ctx.moveTo(bonfire.x - 10 + i * 10, bonfire.y + 10);
+                    ctx.lineTo(bonfire.x - 5 + i * 10, bonfire.y - flameHeight);
+                    ctx.lineTo(bonfire.x + i * 10, bonfire.y + 10);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+            
+            ctx.fillStyle = 'white';
+            ctx.font = `${12 / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText(bonfire.lit ? 'BONFIRE' : 'UNLIT BONFIRE', bonfire.x, bonfire.y - 25);
+        });
+        
+        // Draw portals
+        portals.forEach(portal => {
+            ctx.save();
+            ctx.translate(portal.x, portal.y);
+            
+            for (let i = 0; i < 3; i++) {
+                ctx.strokeStyle = `rgba(148, 0, 211, ${0.5 - i * 0.15})`;
+                ctx.lineWidth = (3 - i) / world.zoom;
+                ctx.beginPath();
+                ctx.arc(0, 0, portal.size / 2 + Math.sin(portal.pulsePhase + i) * 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.fillStyle = '#9400D3';
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, portal.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${14 / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText('MUSCLE PORTAL', 0, -portal.size / 2 - 10);
+            
+            ctx.restore();
+        });
+        
+        // Draw treasures
+        treasures.forEach(treasure => {
+            if (!treasure.opened) {
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(treasure.x - treasure.size/2, treasure.y - treasure.size/2, treasure.size, treasure.size);
+                
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 2 / world.zoom;
+                ctx.strokeRect(treasure.x - treasure.size/2, treasure.y - treasure.size/2, treasure.size, treasure.size);
+            }
+        });
+        
+        // Draw vendors
+        vendors.forEach(vendor => {
+            let onCooldown = vendor === lastVendor && vendorCooldown > 0;
+            
+            ctx.fillStyle = onCooldown ? '#B8860B' : '#FFD700';
+            ctx.fillRect(vendor.x - vendor.size/2, vendor.y - vendor.size/2, vendor.size, vendor.size);
+            
+            ctx.strokeStyle = onCooldown ? '#666' : '#B8860B';
+            ctx.lineWidth = 3 / world.zoom;
+            ctx.strokeRect(vendor.x - vendor.size/2, vendor.y - vendor.size/2, vendor.size, vendor.size);
+            
+            ctx.fillStyle = '#8B4513';
+            ctx.font = `bold ${20 / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText('💰', vendor.x, vendor.y + 5);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${12 / world.zoom}px Courier New`;
+            ctx.fillText(onCooldown ? 'BUSY' : 'VENDOR', vendor.x, vendor.y - vendor.size/2 - 5);
+        });
+        
+        // Draw corpses
+        corpses.forEach(corpse => {
+            ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+            ctx.beginPath();
+            ctx.arc(corpse.x, corpse.y, corpse.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.font = `bold ${14 / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText(`${corpse.muscleBucks} MB`, corpse.x, corpse.y + 5);
+        });
+        
+        // Draw enemies
+        enemies.forEach(enemy => {
+            let alpha = 1;
+            ctx.globalAlpha = alpha;
+            
+            ctx.fillStyle = enemy.onFire ? '#FF4500' : enemy.type.color;
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.type.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            if (enemy.shield && enemy.shield > 0) {
+                ctx.strokeStyle = '#1E90FF';
+                ctx.lineWidth = 3 / world.zoom;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.type.size / 2 + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.globalAlpha = 1;
+            
+            ctx.fillStyle = 'white';
+            ctx.font = `${12 / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText(enemy.type.name, enemy.x, enemy.y - enemy.type.size / 2 - 5);
+            
+            ctx.fillStyle = enemy.type.power > player.power ? '#e94560' : '#4ecdc4';
+            ctx.fillText(`PWR: ${Math.floor(enemy.type.power)}`, enemy.x, enemy.y + enemy.type.size / 2 + 15);
+        });
+        
+        // Draw bosses
+        bosses.forEach(boss => {
+            if (boss.aggro) {
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+                ctx.lineWidth = 5 / world.zoom;
+                ctx.beginPath();
+                ctx.arc(boss.x, boss.y, boss.type.size / 2 + 10, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.fillStyle = boss.isEnraged ? '#8B0000' : '#FF0000';
+            ctx.beginPath();
+            ctx.arc(boss.x, boss.y, boss.type.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.font = `bold ${16 / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText(boss.type.name, boss.x, boss.y - boss.type.size / 2 - 10);
+            
+            ctx.fillStyle = '#FFF';
+            ctx.font = `bold ${14 / world.zoom}px Courier New`;
+            ctx.fillText(`PWR: ${Math.floor(boss.type.power)}`, boss.x, boss.y + boss.type.size / 2 + 20);
+        });
+        
+        // Draw shadow clones
+        shadowClones.forEach(clone => {
+            ctx.fillStyle = 'rgba(233, 69, 96, 0.7)';
+            ctx.beginPath();
+            ctx.arc(clone.x, clone.y, clone.size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = 'rgba(255, 107, 107, 0.7)';
+            ctx.lineWidth = clone.size * 0.4;
+            ctx.beginPath();
+            ctx.moveTo(clone.x + clone.size * 0.75, clone.y);
+            ctx.lineTo(clone.x + clone.size * 1.5, clone.y - clone.size * 0.5);
+            ctx.stroke();
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.font = `${clone.size / world.zoom}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillText('💪', clone.x, clone.y + clone.size * 0.25);
+        });
+        
+        // Draw particles
+        particles.forEach(p => {
+            ctx.fillStyle = p.color ? `rgba(${hexToRgb(p.color)}, ${p.life})` : `rgba(233, 69, 96, ${p.life})`;
+            ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+        });
+        
+        // Draw player
+        let playerAlpha = player.phasing ? 0.5 : 1;
+        ctx.globalAlpha = playerAlpha;
+        
+        ctx.fillStyle = inPortal ? '#9400D3' : '#e94560';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        if (inPortal) {
+            ctx.strokeStyle = 'rgba(148, 0, 211, 0.5)';
+            ctx.lineWidth = 3 / world.zoom;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size + 5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        if (player.motivatedTimer > 0) {
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+            ctx.lineWidth = 5 / world.zoom;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size + 10, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // HP bar
+        if (player.hp < player.maxHp) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(player.x - 30, player.y - player.size - 20, 60, 8);
+            
+            ctx.fillStyle = '#4ecdc4';
+            ctx.fillRect(player.x - 30, player.y - player.size - 20, 60 * (player.hp / player.maxHp), 8);
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1 / world.zoom;
+            ctx.strokeRect(player.x - 30, player.y - player.size - 20, 60, 8);
+        }
+        
+        ctx.strokeStyle = inPortal ? '#9400D3' : '#ff6b6b';
+        ctx.lineWidth = player.size * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(player.x + player.size * 0.75, player.y);
+        ctx.lineTo(player.x + player.size * 1.5, player.y - player.size * 0.5);
+        ctx.stroke();
+        
+        ctx.fillStyle = 'white';
+        ctx.font = `${player.size / world.zoom}px Courier New`;
+        ctx.textAlign = 'center';
+        ctx.fillText('💪', player.x, player.y + player.size * 0.25);
+        
+        ctx.globalAlpha = 1;
+        ctx.restore();
+        
+        // UI overlays
+        if (inPortal) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 20px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(`MUSCLE BOOST: ${Math.ceil(portalTimer / 60)}s`, canvas.width / 2, 50);
+            ctx.restore();
+        }
+        
+        if (player.phaseTimer > 0) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.fillStyle = '#4ecdc4';
+            ctx.font = 'bold 16px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(`PHASING: ${Math.ceil(player.phaseTimer / 60)}s`, canvas.width / 2, 80);
+            ctx.restore();
+        }
+        
+        // Draw minimap
+        drawMinimap();
+    }
+    
+    function drawMinimap() {
+        minimapCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        minimapCtx.fillRect(0, 0, 150, 150);
+        
+        const minimapScale = 0.05;
+        const centerX = 75;
+        const centerY = 75;
+        
+        // Draw entities on minimap
+        enemies.forEach(enemy => {
+            let relX = (enemy.x - player.x) * minimapScale + centerX;
+            let relY = (enemy.y - player.y) * minimapScale + centerY;
+            
+            if (relX > 0 && relX < 150 && relY > 0 && relY < 150) {
+                minimapCtx.fillStyle = enemy.type.power > player.power ? '#e94560' : '#4ecdc4';
+                minimapCtx.fillRect(relX - 1, relY - 1, 2, 2);
+            }
+        });
+        
+        bosses.forEach(boss => {
+            let relX = (boss.x - player.x) * minimapScale + centerX;
+            let relY = (boss.y - player.y) * minimapScale + centerY;
+            
+            if (relX > 0 && relX < 150 && relY > 0 && relY < 150) {
+                minimapCtx.fillStyle = '#FF0000';
+                minimapCtx.fillRect(relX - 2, relY - 2, 4, 4);
+            }
+        });
+        
+        portals.forEach(portal => {
+            let relX = (portal.x - player.x) * minimapScale + centerX;
+            let relY = (portal.y - player.y) * minimapScale + centerY;
+            
+            if (relX > 0 && relX < 150 && relY > 0 && relY < 150) {
+                minimapCtx.fillStyle = '#9400D3';
+                minimapCtx.beginPath();
+                minimapCtx.arc(relX, relY, 3, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+        });
+        
+        bonfires.forEach(bonfire => {
+            if (bonfire.lit) {
+                let relX = (bonfire.x - player.x) * minimapScale + centerX;
+                let relY = (bonfire.y - player.y) * minimapScale + centerY;
+                
+                if (relX > 0 && relX < 150 && relY > 0 && relY < 150) {
+                    minimapCtx.fillStyle = '#FF4500';
+                    minimapCtx.beginPath();
+                    minimapCtx.arc(relX, relY, 2, 0, Math.PI * 2);
+                    minimapCtx.fill();
+                }
+            }
+        });
+        
+        treasures.forEach(treasure => {
+            if (!treasure.opened) {
+                let relX = (treasure.x - player.x) * minimapScale + centerX;
+                let relY = (treasure.y - player.y) * minimapScale + centerY;
+                
+                if (relX > 0 && relX < 150 && relY > 0 && relY < 150) {
+                    minimapCtx.fillStyle = '#FFD700';
+                    minimapCtx.fillRect(relX - 1, relY - 1, 2, 2);
+                }
+            }
+        });
+        
+        vendors.forEach(vendor => {
+            let relX = (vendor.x - player.x) * minimapScale + centerX;
+            let relY = (vendor.y - player.y) * minimapScale + centerY;
+            
+            if (relX > 0 && relX < 150 && relY > 0 && relY < 150) {
+                minimapCtx.fillStyle = '#FFD700';
+                minimapCtx.fillRect(relX - 2, relY - 2, 4, 4);
+            }
+        });
+        
+        weatherEffects.forEach(weather => {
+            let relX = (weather.x - player.x) * minimapScale + centerX;
+            let relY = (weather.y - player.y) * minimapScale + centerY;
+            
+            if (relX > -weather.radius * minimapScale && relX < 150 + weather.radius * minimapScale && 
+                relY > -weather.radius * minimapScale && relY < 150 + weather.radius * minimapScale) {
+                minimapCtx.fillStyle = weather.type.color;
+                minimapCtx.beginPath();
+                minimapCtx.arc(relX, relY, weather.radius * minimapScale, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+        });
+        
+        // Player
+        minimapCtx.fillStyle = '#e94560';
+        minimapCtx.beginPath();
+        minimapCtx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+        minimapCtx.fill();
+        
+        minimapCtx.strokeStyle = '#666';
+        minimapCtx.lineWidth = 2;
+        minimapCtx.strokeRect(0, 0, 150, 150);
+    }
+    
+    function hexToRgb(hex) {
+        if (!hex) return '233, 69, 96';
+        if (hex.includes('rgba')) return '233, 69, 96';
+        if (hex[0] !== '#') return '233, 69, 96';
+        
+        if (hex.length === 4) {
+            hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+        }
+        
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? 
+            parseInt(result[1], 16) + ', ' + 
+            parseInt(result[2], 16) + ', ' + 
+            parseInt(result[3], 16) : '233, 69, 96';
+    }
+    
+    // Battle system
+    function startBattle(enemy, isBoss = false) {
+        console.log("Starting battle with:", enemy.type.name, "at position:", enemy.x, enemy.y, "size:", enemy.type.size);
+        inBattle = true;
+        currentEnemy = enemy;
+        tugPosition = 50;
+        
+        document.getElementById('battleUI').style.display = 'block';
+        document.getElementById('enemyName').textContent = `A ${enemy.type.name.toUpperCase()}`;
+        document.getElementById('enemyPower').textContent = `Power: ${Math.floor(enemy.type.power)}`;
+        document.getElementById('victoryText').style.display = 'none';
+        document.getElementById('defeatText').style.display = 'none';
+        
+        // Show modifiers
+        let modifierText = "";
+        if (enemy.effects && enemy.effects.length > 0) {
+            modifierText = "Effects: " + enemy.effects.join(", ");
+        }
+        document.getElementById('battleModifiers').textContent = modifierText;
+        
+        // Show enrage timer if applicable
+        if (enemy.hasEnrage && !enemy.isEnraged) {
+            document.getElementById('enrageTimer').style.display = 'block';
+            currentEnrageTime = enemy.enrageTime;
+            document.getElementById('enrageTime').textContent = currentEnrageTime;
+            
+            enrageTimer = setInterval(() => {
+                currentEnrageTime--;
+                document.getElementById('enrageTime').textContent = currentEnrageTime;
+                
+                if (currentEnrageTime <= 0) {
+                    enemy.isEnraged = true;
+                    // Don't modify enemy.type.power directly - handle in battle calculations
+                    let enragedPower = enemy.type.power * 2;
+                    document.getElementById('enemyPower').textContent = `Power: ${Math.floor(enragedPower)} (ENRAGED!)`;
+                    document.getElementById('enrageTimer').style.display = 'none';
+                    clearInterval(enrageTimer);
+                }
+            }, 1000);
+        } else {
+            document.getElementById('enrageTimer').style.display = 'none';
+        }
+        
+        updateTugBar();
+        
+        battleTimer = setInterval(() => {
+            if (tugPosition > 0 && tugPosition < 100) {
+                let effectiveEnemyPower = enemy.type.power * (enemy.isEnraged ? 2 : 1);
+                tugPosition -= (effectiveEnemyPower / player.power) * 0.5;
+                
+                if (tugPosition <= 0) {
+                    endBattle(false, isBoss);
+                }
+                updateTugBar();
+            }
+        }, 100);
+    }
+    
+    function armWrestle() {
+        if (!inBattle || !currentEnemy) return;
+        
+        // Get flex power
+        let flexPower = 5;
+        
+        if (player.motivatedTimer > 0) {
+            flexPower *= 1.5;
+        }
+        
+        if (currentEnemy && currentEnemy.shield && currentEnemy.shield > 0) {
+            flexPower *= 0.5;
+            currentEnemy.shield -= 10;
+        }
+        
+        tugPosition += (player.power / currentEnemy.type.power) * flexPower;
+        
+        // Build shadow clone charges
+        if (abilities.shadowClone.charges < abilities.shadowClone.maxCharges) {
+            abilities.shadowClone.charges += 2;
+        }
+        
+        // Particles at CURRENT enemy position (not player)
+        if (currentEnemy) {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: currentEnemy.x + (Math.random() - 0.5) * 40,
+                    y: currentEnemy.y + (Math.random() - 0.5) * 40,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: -Math.random() * 4,
+                    life: 1
+                });
+            }
+        }
+        
+        if (tugPosition >= 100) {
+            endBattle(true);
+        }
+        updateTugBar();
+    }
+    
+    function endBattle(victory, isBoss = false) {
+        if (battleTimer) {
+            clearInterval(battleTimer);
+            battleTimer = null;
+        }
+        
+        if (enrageTimer) {
+            clearInterval(enrageTimer);
+            enrageTimer = null;
+        }
+        
+        if (victory) {
+            let xpGain = Math.floor(currentEnemy.type.xp * (1 + player.stats.xpBonus));
+            let currencyGain = Math.floor(currentEnemy.currency * (1 + player.stats.currencyBonus));
+            
+            // Lucky enemy bonus
+            if (currentEnemy.effects && currentEnemy.effects.includes("lucky") && Math.random() < 0.5) {
+                xpGain *= 2;
+                currencyGain *= 2;
+            }
+            
+            player.xp += xpGain;
+            player.wins++;
+            player.currency += currencyGain;
+            
+            // Chance to drop gear
+            if (Math.random() < 0.1 + (isBoss ? 0.2 : 0)) {
+                const gearSlots = ['head', 'shoulder', 'bicep', 'chest', 'cape', 'legs', 'boots', 'trinket1', 'trinket2'];
+                let gear = createGear(gearSlots[Math.floor(Math.random() * gearSlots.length)]);
+                player.inventory.push(gear);
+                console.log(`Gear dropped: ${gear.name}`);
+            }
+            
+            document.getElementById('xpGain').textContent = `${xpGain} XP, ${currencyGain} MB`;
+            document.getElementById('victoryText').style.display = 'block';
+            
+            while (player.xp >= player.xpNeeded) {
+                player.xp -= player.xpNeeded;
+                player.level++;
+                player.basePower = Math.floor(player.level * 1.5);
+                player.baseMaxHp = 100 + player.level * 20;
+                player.xpNeeded = Math.floor(player.level * 10 * 1.2);
+                player.baseSpeed = 2 + player.level * 0.1;
+                player.size = 20 + player.level * 2;
+                recalculateStats();
+            }
+            
+            // Handle special death effects
+            if (currentEnemy.effects) {
+                if (currentEnemy.effects.includes("explosive")) {
+                    for (let i = 0; i < 50; i++) {
+                        particles.push({
+                            x: currentEnemy.x,
+                            y: currentEnemy.y,
+                            vx: (Math.random() - 0.5) * 20,
+                            vy: -Math.random() * 15 - 5,
+                            life: 1,
+                            color: "#FF4500"
+                        });
+                    }
+                }
+                
+                if (currentEnemy.effects.includes("splitting")) {
+                    for (let i = 0; i < 2; i++) {
+                        let split = createEnemy(
+                            currentEnemy.x + (Math.random() - 0.5) * 50,
+                            currentEnemy.y + (Math.random() - 0.5) * 50,
+                            currentEnemy.baseType
+                        );
+                        split.type.power *= 0.5;
+                        split.type.xp *= 0.5;
+                        split.type.size *= 0.7;
+                        split.type.name = "Mini " + split.type.name;
+                        split.currency *= 0.5;
+                        enemies.push(split);
+                    }
+                }
+            }
+            
+            if (isBoss) {
+                bosses = bosses.filter(b => b !== currentEnemy);
+            } else {
+                enemies = enemies.filter(e => e !== currentEnemy);
+            }
+            
+            // Victory particles at enemy position
+            for (let i = 0; i < 30; i++) {
+                particles.push({
+                    x: currentEnemy.x,
+                    y: currentEnemy.y,
+                    vx: (Math.random() - 0.5) * 16,
+                    vy: -Math.random() * 12 - 2,
+                    life: 1,
+                    color: currentEnemy.type.color
+                });
+            }
+        } else {
+            // Player died - drop muscle bucks
+            if (player.currency > 0) {
+                corpses.push({
+                    x: player.x,
+                    y: player.y,
+                    muscleBucks: player.currency,
+                    timer: 3600, // 60 seconds
+                    size: 25
+                });
+                player.currency = 0;
+            }
+            
+            player.hp -= 20;
+            if (player.hp <= 0) {
+                player.hp = 1;
+                if (isBoss && player.level > 1) {
+                    player.level--;
+                    player.basePower = Math.floor(player.level * 1.5);
+                    player.baseMaxHp = 100 + player.level * 20;
+                    player.xpNeeded = Math.floor(player.level * 10 * 1.2);
+                    player.baseSpeed = 2 + player.level * 0.1;
+                    player.size = 20 + player.level * 2;
+                    player.xp = 0;
+                    recalculateStats();
+                    
+                    document.getElementById('defeatText').innerHTML = 'DEFEATED! Lost a level!';
+                } else {
+                    document.getElementById('defeatText').innerHTML = 'DEFEATED! Try something weaker...';
+                }
+                
+                // Respawn at bonfire
+                if (lastBonfire && lastBonfire.lit) {
+                    setTimeout(() => {
+                        player.x = player.respawnX;
+                        player.y = player.respawnY;
+                        player.hp = player.maxHp;
+                        recalculateStats();
+                        
+                        for (let i = 0; i < 20; i++) {
+                            particles.push({
+                                x: player.x,
+                                y: player.y,
+                                vx: (Math.random() - 0.5) * 6,
+                                vy: -Math.random() * 8,
+                                life: 1,
+                                color: "#FF4500"
+                            });
+                        }
+                        console.log("Respawned at bonfire!");
+                    }, 1500);
+                }
+            }
+            
+            document.getElementById('defeatText').style.display = 'block';
+            
+            if (isBoss) {
+                bosses = bosses.filter(b => b !== currentEnemy);
+            }
+        }
+        
+        updateUI();
+        
+        setTimeout(() => {
+            document.getElementById('battleUI').style.display = 'none';
+            inBattle = false;
+            currentEnemy = null;
+            tugPosition = 50;
+            
+            // Spawn new enemies to replace defeated ones
+            if (enemies.length < 10) {
+                for (let i = enemies.length; i < 10; i++) {
+                    let angle = Math.random() * Math.PI * 2;
+                    let distance = 200 + Math.random() * 300;
+                    let enemy = createEnemy(
+                        player.x + Math.cos(angle) * distance,
+                        player.y + Math.sin(angle) * distance
+                    );
+                    if (enemy) {
+                        enemies.push(enemy);
+                    }
+                }
+            }
+        }, 2000);
+    }
+    
+    function flee() {
+        if (battleTimer) {
+            clearInterval(battleTimer);
+        }
+        if (enrageTimer) {
+            clearInterval(enrageTimer);
+        }
+        
+        document.getElementById('battleUI').style.display = 'none';
+        inBattle = false;
+        tugPosition = 50;
+        
+        if (currentEnemy) {
+            let dx = player.x - currentEnemy.x;
+            let dy = player.y - currentEnemy.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            player.x += (dx / dist) * 100; // Increased from 50 to 100 for better separation
+            player.y += (dy / dist) * 100;
+            
+            // Add a flee cooldown to the enemy to prevent immediate re-engagement  
+            currentEnemy.fleeCooldown = 180; // 3 seconds
+        }
+        
+        currentEnemy = null;
+    }
+    
+    function updateTugBar() {
+        document.getElementById('tugFill').style.width = tugPosition + '%';
+    }
+    
+    // Vendor functions
+    function openVendor(vendor) {
+        document.getElementById('vendorUI').style.display = 'block';
+        document.getElementById('vendorCurrency').textContent = player.currency;
+        gamePaused = true;
+        
+        let vendorDiv = document.getElementById('vendorItems');
+        vendorDiv.innerHTML = '';
+        
+        vendor.items.forEach((item, index) => {
+            let canAfford = player.currency >= item.price;
+            let itemDiv = document.createElement('div');
+            itemDiv.className = canAfford ? 'vendor-item' : 'vendor-item cant-afford';
+            itemDiv.innerHTML = `
+                <div>
+                    <div style="color: ${item.color}; font-weight: bold;">${item.name}</div>
+                    <div style="font-size: 12px; color: #888;">${item.slot}</div>
+                </div>
+                <div class="price" style="${!canAfford ? 'color: #e94560;' : ''}">${item.price} MB</div>
+            `;
+            
+            if (canAfford) {
+                itemDiv.onclick = () => buyItem(vendor, index);
+            }
+            
+            vendorDiv.appendChild(itemDiv);
+        });
+    }
+    
+    function closeVendor() {
+        document.getElementById('vendorUI').style.display = 'none';
+        gamePaused = false;
+        vendorCooldown = 60; // 1 second cooldown
+        
+        // Push player away slightly
+        if (lastVendor) {
+            let dx = player.x - lastVendor.x;
+            let dy = player.y - lastVendor.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < player.size + lastVendor.size + 10 && dist > 0) {
+                player.x += (dx / dist) * 30;
+                player.y += (dy / dist) * 30;
+            }
+        }
+    }
+    
+    function buyItem(vendor, index) {
+        let item = vendor.items[index];
+        if (player.currency >= item.price) {
+            player.currency -= item.price;
+            player.inventory.push(item);
+            vendor.items.splice(index, 1);
+            
+            updateUI();
+            
+            // If vendor has no items, remove them
+            if (vendor.items.length === 0) {
+                vendors = vendors.filter(v => v !== vendor);
+                closeVendor();
+                
+                // Poof effect
+                for (let i = 0; i < 20; i++) {
+                    particles.push({
+                        x: vendor.x,
+                        y: vendor.y,
+                        vx: (Math.random() - 0.5) * 10,
+                        vy: (Math.random() - 0.5) * 10,
+                        life: 1,
+                        color: "#FFD700"
+                    });
+                }
+            } else {
+                // Refresh vendor UI
+                openVendor(vendor);
+            }
+        }
+    }
+    
+    // Gear functions
+    function equipGear(gear) {
+        if (player.equipped[gear.slot]) {
+            player.inventory.push(player.equipped[gear.slot]);
+        }
+        
+        player.equipped[gear.slot] = gear;
+        player.inventory = player.inventory.filter(item => item.id !== gear.id);
+        
+        recalculateStats();
+        updateInventoryUI();
+    }
+    
+    function recalculateStats() {
+        // Reset stats
+        player.stats = {
+            powerBonus: 0,
+            hpBonus: 0,
+            speedBonus: 0,
+            regenBonus: 0,
+            xpBonus: 0,
+            currencyBonus: 0,
+            cooldownReduction: 0
+        };
+        
+        // Add up equipped gear stats
+        for (let slot in player.equipped) {
+            let gear = player.equipped[slot];
+            for (let stat in gear.stats) {
+                player.stats[stat] += gear.stats[stat];
+            }
+        }
+        
+        // Apply stats
+        player.power = player.basePower + player.stats.powerBonus;
+        
+        // Apply portal power bonus (temporary effect)
+        if (inPortal) {
+            player.power *= 2;
+        }
+        
+        player.maxHp = player.baseMaxHp + player.stats.hpBonus;
+        player.speed = player.baseSpeed + player.stats.speedBonus;
+        player.hpRegen = 0.1 + player.stats.regenBonus;
+        
+        // Update ability cooldowns
+        let cooldownMult = 1 - player.stats.cooldownReduction;
+        abilities.quantumBurp.maxCooldown = Math.floor(300 * cooldownMult);
+        abilities.existentialYeet.maxCooldown = Math.floor(600 * cooldownMult);
+        abilities.motivationalScream.maxCooldown = Math.floor(900 * cooldownMult);
+        abilities.shadowClone.maxCooldown = Math.floor(1800 * cooldownMult);
+    }
+    
+    function updateInventoryUI() {
+        // Update equipped slots
+        const gearSlots = ['head', 'shoulder', 'bicep', 'chest', 'cape', 'legs', 'boots', 'trinket1', 'trinket2'];
+        
+        for (let slot of gearSlots) {
+            let slotElement = document.querySelector(`[data-slot="${slot}"] .slot-item`);
+            let slotDiv = document.querySelector(`[data-slot="${slot}"]`);
+            
+            if (player.equipped[slot]) {
+                slotElement.textContent = player.equipped[slot].name;
+                slotElement.style.color = player.equipped[slot].color;
+                slotDiv.classList.add('equipped');
+            } else {
+                slotElement.textContent = "Empty";
+                slotElement.style.color = "#666";
+                slotDiv.classList.remove('equipped');
+            }
+        }
+        
+        // Update inventory items
+        let inventoryDiv = document.getElementById('inventoryItems');
+        inventoryDiv.innerHTML = '';
+        
+        player.inventory.forEach(item => {
+            let itemDiv = document.createElement('div');
+            itemDiv.className = `item ${item.rarity}`;
+            itemDiv.innerHTML = `
+                <div style="color: ${item.color}; font-size: 10px;">${item.name}</div>
+                <div style="font-size: 9px; color: #888;">${item.slot}</div>
+                <button class="disenchant-button" onclick="window.bicepRPGInstance.disenchantGear('${item.id}')">💰 ${item.value}</button>
+            `;
+            itemDiv.onclick = () => equipGear(item);
+            inventoryDiv.appendChild(itemDiv);
+        });
+        
+        // Update total stats display
+        let statsDiv = document.getElementById('totalStats');
+        statsDiv.innerHTML = `
+            Power: +${player.stats.powerBonus.toFixed(0)}<br>
+            HP: +${player.stats.hpBonus.toFixed(0)}<br>
+            Speed: +${player.stats.speedBonus.toFixed(1)}<br>
+            Regen: +${player.stats.regenBonus.toFixed(1)}/s<br>
+            XP Gain: +${(player.stats.xpBonus * 100).toFixed(0)}%<br>
+            Currency: +${(player.stats.currencyBonus * 100).toFixed(0)}%<br>
+            CDR: ${(player.stats.cooldownReduction * 100).toFixed(0)}%
+        `;
+    }
+    
+    function disenchantGear(gear) {
+        player.currency += gear.value;
+        
+        if (player.equipped[gear.slot] && player.equipped[gear.slot].id === gear.id) {
+            delete player.equipped[gear.slot];
+        } else {
+            player.inventory = player.inventory.filter(item => item.id !== gear.id);
+        }
+        
+        recalculateStats();
+        updateInventoryUI();
+        updateUI();
+        
+        // Particles
+        for (let i = 0; i < 10; i++) {
+            particles.push({
+                x: player.x,
+                y: player.y,
+                vx: (Math.random() - 0.5) * 5,
+                vy: -Math.random() * 5,
+                life: 1,
+                color: "#FFD700"
+            });
+        }
+    }
+    
+    function autoEquipBest() {
+        const gearSlots = ['head', 'shoulder', 'bicep', 'chest', 'cape', 'legs', 'boots', 'trinket1', 'trinket2'];
+        
+        // Calculate gear score
+        function calculateGearScore(gear) {
+            let score = 0;
+            score += (gear.stats.powerBonus || 0) * 10;
+            score += (gear.stats.hpBonus || 0) * 1;
+            score += (gear.stats.speedBonus || 0) * 50;
+            score += (gear.stats.regenBonus || 0) * 30;
+            score += (gear.stats.xpBonus || 0) * 40;
+            score += (gear.stats.currencyBonus || 0) * 35;
+            score += (gear.stats.cooldownReduction || 0) * 60;
+            
+            // Rarity bonus
+            let rarityBonus = { common: 1, uncommon: 1.5, rare: 2, epic: 3, legendary: 5 };
+            score *= rarityBonus[gear.rarity] || 1;
+            
+            return score;
+        }
+        
+        for (let slot of gearSlots) {
+            let bestGear = null;
+            let bestScore = 0;
+            
+            // Check equipped
+            if (player.equipped[slot]) {
+                bestScore = calculateGearScore(player.equipped[slot]);
+                bestGear = player.equipped[slot];
+            }
+            
+            // Check inventory
+            player.inventory.forEach(item => {
+                if (item.slot === slot) {
+                    let score = calculateGearScore(item);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestGear = item;
+                    }
+                }
+            });
+            
+            // Equip if found better
+            if (bestGear && (!player.equipped[slot] || bestGear.id !== player.equipped[slot].id)) {
+                equipGear(bestGear);
+            }
+        }
+    }
+    
+    // UI functions
+    function updateUI() {
+        document.getElementById('level').textContent = player.level;
+        document.getElementById('power').textContent = Math.floor(player.power);
+        document.getElementById('hp').textContent = Math.floor(player.hp);
+        document.getElementById('maxHp').textContent = Math.floor(player.maxHp);
+        document.getElementById('size').textContent = player.size;
+        document.getElementById('wins').textContent = player.wins;
+        document.getElementById('xp').textContent = player.xp;
+        document.getElementById('xpNeeded').textContent = player.xpNeeded;
+        document.getElementById('currency').textContent = player.currency;
+    }
+    
+    function updateAbilityUI() {
+        // Update ability cooldowns
+        let ability1 = document.getElementById('ability1');
+        let cooldown1 = ability1.querySelector('.cooldown-overlay');
+        if (abilities.quantumBurp.cooldown > 0) {
+            ability1.classList.add('on-cooldown');
+            cooldown1.style.display = 'block';
+            cooldown1.textContent = Math.ceil(abilities.quantumBurp.cooldown / 60) + 's';
+        } else {
+            ability1.classList.remove('on-cooldown');
+            cooldown1.style.display = 'none';
+        }
+        
+        let ability2 = document.getElementById('ability2');
+        let cooldown2 = ability2.querySelector('.cooldown-overlay');
+        if (abilities.existentialYeet.cooldown > 0) {
+            ability2.classList.add('on-cooldown');
+            cooldown2.style.display = 'block';
+            cooldown2.textContent = Math.ceil(abilities.existentialYeet.cooldown / 60) + 's';
+        } else {
+            ability2.classList.remove('on-cooldown');
+            cooldown2.style.display = 'none';
+        }
+        
+        let ability3 = document.getElementById('ability3');
+        let cooldown3 = ability3.querySelector('.cooldown-overlay');
+        if (abilities.motivationalScream.cooldown > 0) {
+            ability3.classList.add('on-cooldown');
+            cooldown3.style.display = 'block';
+            cooldown3.textContent = Math.ceil(abilities.motivationalScream.cooldown / 60) + 's';
+        } else {
+            ability3.classList.remove('on-cooldown');
+            cooldown3.style.display = 'none';
+        }
+        
+        // Ultimate charge
+        let abilityUlt = document.getElementById('abilityUlt');
+        let cooldownUlt = abilityUlt.querySelector('.cooldown-overlay');
+        if (abilities.shadowClone.charges < abilities.shadowClone.maxCharges) {
+            abilityUlt.classList.add('on-cooldown');
+            cooldownUlt.style.display = 'block';
+            cooldownUlt.textContent = Math.floor(abilities.shadowClone.charges) + '%';
+        } else {
+            abilityUlt.classList.remove('on-cooldown');
+            cooldownUlt.style.display = 'none';
+        }
+    }
+    
+    function updateDebug() {
+        if (!debugMode) return;
+        
+        frameCount++;
+        const now = Date.now();
+        if (now - lastFPSUpdate >= 1000) {
+            currentFPS = frameCount;
+            frameCount = 0;
+            lastFPSUpdate = now;
+        }
+        
+        document.getElementById('fps').textContent = currentFPS;
+        document.getElementById('enemyCount').textContent = enemies.length;
+        document.getElementById('bossCount').textContent = bosses.length;
+        document.getElementById('portalCount').textContent = portals.length;
+        document.getElementById('bonfireCount').textContent = bonfires.length;
+        document.getElementById('treasureCount').textContent = treasures.filter(t => !t.opened).length;
+        document.getElementById('particleCount').textContent = particles.length;
+        document.getElementById('weatherDebug').textContent = weatherEffects.length > 0 ? 
+            weatherEffects.map(w => w.type.name).join(', ') : 'None';
+        document.getElementById('cloneCount').textContent = shadowClones.length;
+        document.getElementById('vendorCount').textContent = vendors.length;
+        document.getElementById('corpseCount').textContent = corpses.length;
+        document.getElementById('gameTimeDebug').textContent = Math.floor(gameTime / 60);
+        document.getElementById('playerPos').textContent = `${Math.floor(player.x)},${Math.floor(player.y)}`;
+    }
+    
+    // Input handling
+    window.addEventListener('keydown', function(e) {
+        keys[e.key.toLowerCase()] = true;
+        
+        if (e.key === 'F3') {
+            e.preventDefault();
+            debugMode = !debugMode;
+            document.getElementById('debugPanel').style.display = debugMode ? 'block' : 'none';
+        }
+        
+        if (e.key.toLowerCase() === 'i') {
+            window.bicepRPGInstance.toggleInventory();
+        }
+        
+        // Close vendor with ESC
+        if (e.key === 'Escape') {
+            if (document.getElementById('vendorUI').style.display === 'block') {
+                closeVendor();
+            }
+            if (document.getElementById('inventoryUI').style.display === 'block') {
+                window.bicepRPGInstance.toggleInventory();
+            }
+        }
+        
+        // Abilities
+        if (e.key === '1' && abilities.quantumBurp.cooldown === 0 && !gamePaused) {
+            abilities.quantumBurp.cooldown = abilities.quantumBurp.maxCooldown;
+            player.phasing = true;
+            player.phaseTimer = 180; // 3 seconds
+            
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1,
+                    color: "#4ecdc4"
+                });
+            }
+        }
+        
+        if (e.key === '2' && abilities.existentialYeet.cooldown === 0 && !gamePaused) {
+            abilities.existentialYeet.cooldown = abilities.existentialYeet.maxCooldown;
+            
+            let dashX = 0, dashY = 0;
+            if (keys.w) dashY = -1;
+            if (keys.s) dashY = 1;
+            if (keys.a) dashX = -1;
+            if (keys.d) dashX = 1;
+            
+            if (dashX === 0 && dashY === 0) {
+                dashX = 1;
+            }
+            
+            let dashDist = 200;
+            player.x += dashX * dashDist;
+            player.y += dashY * dashDist;
+            
+            for (let i = 0; i < 30; i++) {
+                particles.push({
+                    x: player.x - dashX * dashDist * (i / 30),
+                    y: player.y - dashY * dashDist * (i / 30),
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 1,
+                    color: "#9400D3"
+                });
+            }
+        }
+        
+        if (e.key === '3' && abilities.motivationalScream.cooldown === 0 && !gamePaused) {
+            abilities.motivationalScream.cooldown = abilities.motivationalScream.maxCooldown;
+            player.motivatedTimer = 300; // 5 seconds
+            
+            // Clear nearby weather effects
+            weatherEffects.forEach(weather => {
+                if (weather.fireGrid) {
+                    // Clear fire cells within 200 pixels
+                    for (let key in weather.fireGrid) {
+                        let [x, y] = key.split(',').map(Number);
+                        let cellX = x * 50 + 25; // Center of cell
+                        let cellY = y * 50 + 25;
+                        let distance = Math.sqrt((cellX - player.x) ** 2 + (cellY - player.y) ** 2);
+                        if (distance < 200) {
+                            delete weather.fireGrid[key];
+                        }
+                    }
+                }
+            });
+            
+            // Create shockwave effect
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
+                for (let r = 0; r < 3; r++) {
+                    particles.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: Math.cos(angle) * (5 + r * 2),
+                        vy: Math.sin(angle) * (5 + r * 2),
+                        life: 1,
+                        color: "#FFD700"
+                    });
+                }
+            }
+            
+            // Push nearby enemies
+            [...enemies, ...bosses].forEach(enemy => {
+                let dx = enemy.x - player.x;
+                let dy = enemy.y - player.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 200 && dist > 0) {
+                    let pushForce = 50;
+                    enemy.x += (dx / dist) * pushForce;
+                    enemy.y += (dy / dist) * pushForce;
+                }
+            });
+        }
+        
+        if (e.key === '4' && !gamePaused) {
+            createShadowClone();
+        }
+    });
+    
+    window.addEventListener('keyup', function(e) {
+        keys[e.key.toLowerCase()] = false;
+    });
+    
+    // Button handlers
+    document.getElementById('flexButton').addEventListener('click', armWrestle);
+    document.getElementById('fleeButton').addEventListener('click', flee);
+    
+    // Ability click handlers
+    document.getElementById('ability1').addEventListener('click', () => {
+        if (!gamePaused) {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: '1' }));
+        }
+    });
+    document.getElementById('ability2').addEventListener('click', () => {
+        if (!gamePaused) {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }));
+        }
+    });
+    document.getElementById('ability3').addEventListener('click', () => {
+        if (!gamePaused) {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: '3' }));
+        }
+    });
+    document.getElementById('abilityUlt').addEventListener('click', () => {
+        if (!gamePaused) {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key: '4' }));
+        }
+    });
+    
+    // Public API
+    window.bicepRPGInstance = {
+        cleanup: function() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            if (battleTimer) {
+                clearInterval(battleTimer);
+            }
+            if (enrageTimer) {
+                clearInterval(enrageTimer);
+            }
+        },
+        toggleInventory: function() {
+            let inventoryUI = document.getElementById('inventoryUI');
+            if (inventoryUI.style.display === 'block') {
+                inventoryUI.style.display = 'none';
+                gamePaused = false;
+            } else {
+                inventoryUI.style.display = 'block';
+                gamePaused = true;
+                updateInventoryUI();
+            }
+        },
+        closeVendor: closeVendor,
+        disenchantGear: function(gearId) {
+            let gear = player.inventory.find(item => item.id === gearId);
+            if (gear) disenchantGear(gear);
+        },
+        autoEquipBest: autoEquipBest
+    };
+    
+    // Start the game
+    initialize();
+})();
+    </script>
+</body>
+</html>

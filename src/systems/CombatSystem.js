@@ -72,7 +72,8 @@ export default class CombatSystem {
             attackerId,
             defenderId,
             startTime: Date.now(),
-            tugPosition: 0.5, // 0 = defender winning, 1 = attacker winning
+            tugPosition: 1.0, // Start at full (player winning)
+            drainRate: 0.15, // How fast the bar drains per second
             attackerDPS: 0,
             defenderDPS: 0,
             lastAttackerClick: 0,
@@ -144,12 +145,10 @@ export default class CombatSystem {
         // Update combat
         combatData.lastAttackerClick = now;
         combatData.clickCount++;
-        combatData.attackerDPS = this.calculateDPS(combatData.clickCount, now - combatData.startTime);
         
-        // Apply damage to tug position
-        const isAttacker = combatData.attackerId === player.id;
-        const tugChange = (clickPower / 100) * (isAttacker ? 1 : -1);
-        combatData.tugPosition = Math.max(0, Math.min(1, combatData.tugPosition + tugChange));
+        // Each click pushes the bar up
+        const pushAmount = 0.05 + (clickPower * 0.02); // Base push + power bonus
+        combatData.tugPosition = Math.min(1, combatData.tugPosition + pushAmount);
         
         // Emit click event
         this.eventBus.emit('combat:player-click', {
@@ -201,42 +200,27 @@ export default class CombatSystem {
         if (now - combatData.lastDefenderClick >= this.config.enemyClickInterval) {
             combatData.lastDefenderClick = now;
             
-            // Get enemy power
+            // Get enemy power and adjust drain rate
             const powerComponent = defender.getComponent('power');
             const enemyPower = powerComponent ? powerComponent.value : 1;
             
-            // Calculate enemy DPS
-            const combatTime = (now - combatData.startTime) / 1000;
-            combatData.defenderDPS = enemyPower * (1000 / this.config.enemyClickInterval);
-            
-            // Emit enemy click event
-            this.eventBus.emit('combat:enemy-click', {
-                enemyId: combatData.defenderId,
-                combatData,
-                enemyPower
-            });
+            // Higher power enemies make the bar drain faster
+            combatData.drainRate = 0.1 + (enemyPower * 0.02);
         }
     }
 
     /**
-     * Update tug position based on DPS
+     * Update tug position - automatically drains, clicks push it back up
      * @param {Object} combatData 
      * @param {number} deltaTime 
      */
     updateTugPosition(combatData, deltaTime) {
-        const dpsDifference = combatData.attackerDPS - combatData.defenderDPS;
-        const tugChange = (dpsDifference / 20) * (deltaTime / 1000); // Made 5x more responsive
+        // Automatically drain the bar
+        const drainPerFrame = combatData.drainRate * (deltaTime / 1000);
+        combatData.tugPosition -= drainPerFrame;
         
-        // Debug combat calculations
-        console.log('Combat Debug:', {
-            attackerDPS: combatData.attackerDPS,
-            defenderDPS: combatData.defenderDPS,
-            dpsDifference,
-            tugChange,
-            currentPosition: combatData.tugPosition
-        });
-        
-        combatData.tugPosition = Math.max(0, Math.min(1, combatData.tugPosition + tugChange));
+        // Clamp between 0 and 1
+        combatData.tugPosition = Math.max(0, Math.min(1, combatData.tugPosition));
         
         // Emit tug update
         this.eventBus.emit('combat:tug-update', {
